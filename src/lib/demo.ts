@@ -53,7 +53,7 @@ export const DEMO_DRIVERS: MapDriver[] = [
     id: "demo-ride-main",
     driverId: "demo-driver-2",
     name: "Jordan L.",
-    faculty: "Commerce (Sauder)",
+    faculty: "Sauder School of Business",
     originLabel: "Main & Broadway",
     destinationLabel: "UBC Bus Exchange",
     origin: { lat: 49.2632, lng: -123.1007 },
