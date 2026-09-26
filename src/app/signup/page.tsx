@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FACULTIES, isAllowedEmail, allowedDomains } from "@/lib/auth";
-import type { Role } from "@/lib/types";
 
 export default function SignupPage() {
   return (
@@ -16,9 +15,6 @@ export default function SignupPage() {
 
 function SignupForm() {
   const router = useRouter();
-  const params = useSearchParams();
-  const role: Role = params.get("role") === "driver" ? "driver" : "rider";
-  const isDriver = role === "driver";
 
   const [email, setEmail] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
@@ -36,8 +32,9 @@ function SignupForm() {
       return;
     }
     setLoading(true);
+    // Every account can both ride and drive; the mode is picked after login.
     const form = new FormData(e.currentTarget);
-    form.set("role", role);
+    form.set("role", "both");
     const res = await fetch("/api/signup", { method: "POST", body: form });
     const body = await res.json().catch(() => ({}));
     setLoading(false);
@@ -52,15 +49,10 @@ function SignupForm() {
     <main className="screen">
       <Link href="/" className="text-sm text-muted">← Back</Link>
       <div className="mt-4 mb-6">
-        <span
-          className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
-            isDriver ? "bg-ubc text-white" : "bg-sky/15 text-sky"
-          }`}
-        >
-          {isDriver ? "Driver" : "Rider"}
-        </span>
-        <h1 className="mt-3 text-3xl font-bold text-ubc">Create your account</h1>
-        <p className="mt-1 text-muted">We&apos;ll send a link to your UBC inbox.</p>
+        <h1 className="text-3xl font-bold text-ubc">Create your account</h1>
+        <p className="mt-1 text-muted">
+          One account to ride and drive. We&apos;ll send a link to your UBC inbox.
+        </p>
       </div>
 
       <form onSubmit={onSubmit} className="card flex flex-col gap-4 p-5">
@@ -138,7 +130,7 @@ function SignupForm() {
 
         {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        <button type="submit" disabled={loading} className={isDriver ? "btn-ubc" : "btn-sky"}>
+        <button type="submit" disabled={loading} className="btn-ubc">
           {loading ? "Creating account…" : "Continue"}
         </button>
       </form>

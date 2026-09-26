@@ -7,7 +7,6 @@ import { IDV_COOKIE, stripe } from "@/lib/stripe";
 export async function POST() {
   const me = await getProfile();
   if (!me) return jsonError("Sign in first.", 401);
-  if (me.role === "rider") return jsonError("Only drivers verify a license.", 403);
 
   const session = await stripe().identity.verificationSessions.create({
     type: "document",

@@ -7,7 +7,6 @@ import { jsonError } from "@/lib/api";
 export async function POST(req: Request) {
   const me = await getProfile();
   if (!me) return jsonError("Sign in first.", 401);
-  if (me.role === "rider") return jsonError("Only drivers add a vehicle.", 403);
 
   const b = await req.json();
   const make_model = String(b.make_model ?? "").trim();

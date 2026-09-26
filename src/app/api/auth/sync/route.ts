@@ -6,6 +6,6 @@ export async function POST() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  const { verified, role, licenseVerified } = await syncVerified(user);
-  return NextResponse.json({ verified, role, next: verified ? nextPathFor(role, licenseVerified) : "/verify" });
+  const { verified, role } = await syncVerified(user);
+  return NextResponse.json({ verified, role, next: verified ? nextPathFor() : "/verify" });
 }

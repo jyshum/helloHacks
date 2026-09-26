@@ -25,7 +25,8 @@ const NEARBY_KM = 8;
 export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitchMode?: () => void }) {
   const router = useRouter();
   const myPos = useMyLocation();
-  const { drivers } = useLiveDrivers(me, myPos);
+  // Broadcast the mode, not the account role, so nearby drivers see me as a rider.
+  const { drivers } = useLiveDrivers({ ...me, role: "rider" }, myPos);
 
   const [stage, setStage] = useState<Stage>("home");
   const [field, setField] = useState<Field>("dropoff");

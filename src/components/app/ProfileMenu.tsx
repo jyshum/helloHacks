@@ -64,10 +64,8 @@ export default function ProfileMenu({
             <nav className="flex flex-col py-2">
               <MenuItem href="/map" label="Home" icon="⌂" onClick={() => setOpen(false)} />
               <MenuItem href="/trips" label="Your trips" icon="⏱" onClick={() => setOpen(false)} />
-              {(me.role === "driver" || me.role === "both") && (
-                <MenuItem href="/driver-verify" label="License & car" icon="🪪" onClick={() => setOpen(false)} />
-              )}
-              {me.role === "both" && onSwitchMode && (
+              <MenuItem href="/driver-verify" label="License & car" icon="🪪" onClick={() => setOpen(false)} />
+              {onSwitchMode && (
                 <button
                   onClick={() => {
                     onSwitchMode();

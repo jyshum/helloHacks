@@ -24,7 +24,8 @@ export type DriverMe = MenuUser & { faculty: string | null; year: number | null;
 export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitchMode?: () => void }) {
   const router = useRouter();
   const myPos = useMyLocation();
-  const { riders, liveRiders } = useLiveDrivers(me, myPos);
+  // Broadcast the mode, not the account role, so riders see me as a driver.
+  const { riders, liveRiders } = useLiveDrivers({ ...me, role: "driver" }, myPos);
   const [ride, setRide] = useState<Ride | null>(null);
   const [requests, setRequests] = useState<Req[]>([]);
   const [loaded, setLoaded] = useState(false);
