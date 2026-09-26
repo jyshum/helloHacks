@@ -6,6 +6,7 @@ import { haversineKm, type LatLng } from "@/lib/geo";
 export type Quote = {
   rideId: string;
   driverName: string;
+  licenseVerified: boolean;
   detourMinutes: number;
   detourKm: number;
   estimatedCostCents: number;
@@ -17,7 +18,7 @@ export async function quoteRide(pickup: LatLng, rideId: string | null, excludeDr
   const admin = createAdminClient();
   let query = admin
     .from("rides")
-    .select("*, driver:users!rides_driver_id_fkey(full_name)")
+    .select("*, driver:users!rides_driver_id_fkey(full_name, license_verified)")
     .eq("status", "posted")
     .gt("seats_available", 0);
   if (rideId) query = query.eq("id", rideId);
@@ -42,6 +43,7 @@ export async function quoteRide(pickup: LatLng, rideId: string | null, excludeDr
       return {
         rideId: r.id as string,
         driverName: (r.driver?.full_name as string) ?? "Driver",
+        licenseVerified: !!r.driver?.license_verified,
         detourMinutes,
         detourKm,
         estimatedCostCents: calculateGasContribution(detourKm),

@@ -8,7 +8,7 @@ import { CAMPUS_SPOTS, PICKUP_SPOTS, type Place } from "@/lib/places";
 import { formatCents, PRICING_FORMULA } from "@/lib/pricing";
 import { MAX_DETOUR_MINUTES } from "@/lib/matching";
 
-type Quote = { rideId: string; driverName: string; detourMinutes: number; detourKm: number; estimatedCostCents: number; valid: boolean };
+type Quote = { rideId: string; driverName: string; licenseVerified: boolean; detourMinutes: number; detourKm: number; estimatedCostCents: number; valid: boolean };
 
 export default function RequestPage() {
   const router = useRouter();
@@ -84,7 +84,10 @@ export default function RequestPage() {
       {quote && (
         <div className="card mt-4 p-5">
           <div className="flex items-center justify-between">
-            <p className="font-heading font-semibold text-ink">Best match: {quote.driverName}</p>
+            <div>
+              <p className="font-heading font-semibold text-ink">Best match: {quote.driverName}</p>
+              {quote.licenseVerified && <p className="text-xs font-semibold text-green">License verified ✓</p>}
+            </div>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tooFar ? "bg-red-50 text-red-700" : "bg-green/10 text-green"}`}>
               +{quote.detourMinutes} min detour
             </span>

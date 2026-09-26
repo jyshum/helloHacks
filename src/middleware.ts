@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const GUARDED = ["/map", "/request", "/driver", "/trip", "/match"];
+const GUARDED = ["/map", "/request", "/driver", "/driver-verify", "/trip", "/match"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

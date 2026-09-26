@@ -12,7 +12,7 @@ import { DRIVER_ICON, RIDER_ICON, SELF_ICON } from "./markers";
 import Avatar from "@/components/Avatar";
 import type { Role } from "@/lib/types";
 
-type Me = { id: string; full_name: string; role: Role; photo_url: string | null };
+type Me = { id: string; full_name: string; role: Role; photo_url: string | null; license_verified: boolean };
 
 type PresenceUser = { user_id: string; role: Role; name: string; lat: number; lng: number };
 
@@ -261,6 +261,11 @@ function LiveMapInner({ me }: { me: Me }) {
             {isRider && (
               <Link href="/request" className="btn-sky w-full">
                 Request a ride
+              </Link>
+            )}
+            {isDriver && !me.license_verified && (
+              <Link href="/driver-verify" className="btn-ghost w-full">
+                Verify your license
               </Link>
             )}
             {isDriver && (

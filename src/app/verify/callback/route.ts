@@ -23,6 +23,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login?verified=1", url.origin));
   }
 
-  const { verified, role } = await syncVerified(user);
-  return NextResponse.redirect(new URL(verified ? nextPathFor(role) : "/verify", url.origin));
+  const { verified, role, licenseVerified } = await syncVerified(user);
+  return NextResponse.redirect(new URL(verified ? nextPathFor(role, licenseVerified) : "/verify", url.origin));
 }
