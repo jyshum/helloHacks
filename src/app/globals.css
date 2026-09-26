@@ -21,7 +21,7 @@ h1, h2, h3, h4 {
     @apply btn bg-ubc text-white hover:bg-ubc/90;
   }
   .btn-sky {
-    @apply btn bg-sky text-white hover:bg-sky/90;
+    @apply btn bg-sky text-ubc hover:bg-sky/90;
   }
   .btn-ghost {
     @apply btn bg-transparent text-ink border border-line hover:bg-white;

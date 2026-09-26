@@ -11,3 +11,12 @@ export async function requireProfile(): Promise<User> {
   if (!data) redirect("/signup");
   return data as User;
 }
+
+// Same as requireProfile but for API routes: returns null instead of redirecting.
+export async function getProfile(): Promise<User | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.from("users").select("*").eq("auth_id", user.id).maybeSingle();
+  return (data as User) ?? null;
+}
