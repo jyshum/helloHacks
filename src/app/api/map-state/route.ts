@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { MapDriver, MapRider } from "@/lib/demo";
+import { getProfile } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 // Everything the map needs in one call. Uses the admin client because
 // users RLS only lets people read their own row.
 export async function GET() {
+  if (!(await getProfile())) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const admin = createAdminClient();
 
   const [ridesRes, reqsRes] = await Promise.all([
