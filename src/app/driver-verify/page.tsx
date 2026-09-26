@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/profile";
 import DriverVerify from "@/components/driver/DriverVerify";
@@ -8,7 +7,6 @@ export const dynamic = "force-dynamic";
 
 export default async function DriverVerifyPage() {
   const me = await requireProfile();
-  if (me.role === "rider") redirect("/map");
   const { data: vehicle } = await createAdminClient()
     .from("vehicles")
     .select("*")

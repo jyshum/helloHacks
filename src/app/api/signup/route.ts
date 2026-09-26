@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const faculty = String(form.get("faculty") ?? "") || null;
   const yearRaw = String(form.get("year") ?? "");
   const year = yearRaw ? Number(yearRaw) : null;
-  const role = (String(form.get("role") ?? "rider") as Role);
+  const role = (String(form.get("role") ?? "both") as Role);
   const photo = form.get("photo");
 
   if (!isAllowedEmail(email)) {

@@ -26,7 +26,7 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
   const router = useRouter();
   const myPos = useMyLocation();
   // Riders watch drivers but never broadcast their own location on the public map.
-  const { drivers } = useLiveDrivers(me, myPos, false);
+  const { drivers } = useLiveDrivers({ ...me, role: "rider" }, myPos, false);
 
   const [stage, setStage] = useState<Stage>("home");
   const [field, setField] = useState<Field>("dropoff");

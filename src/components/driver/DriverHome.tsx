@@ -25,7 +25,8 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
   const router = useRouter();
   const myPos = useMyLocation();
   const [ride, setRide] = useState<Ride | null>(null);
-  const { riders } = useLiveDrivers(me, myPos, !!ride);
+  // Broadcast as a driver (the mode, not the account role), and only while online.
+  const { riders } = useLiveDrivers({ ...me, role: "driver" }, myPos, !!ride);
   const [requests, setRequests] = useState<Req[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [picking, setPicking] = useState(false);

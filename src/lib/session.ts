@@ -24,8 +24,8 @@ export async function syncVerified(
   };
 }
 
-// Where a verified user goes next. Drivers verify their license first.
-export function nextPathFor(role: Role | null, licenseVerified: boolean): string {
-  if ((role === "driver" || role === "both") && !licenseVerified) return "/driver-verify";
+// Where a verified user goes next. Everyone lands on the ride/drive chooser;
+// license verification is offered from driver mode instead of forced here.
+export function nextPathFor(): string {
   return "/map";
 }
