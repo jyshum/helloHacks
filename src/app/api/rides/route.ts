@@ -6,6 +6,7 @@ import { isLatLng, jsonError } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (!(await getProfile())) return jsonError("Sign in first.", 401);
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("rides")
