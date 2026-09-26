@@ -6,7 +6,7 @@ import type { RideRequest } from "@/lib/types";
 
 type Next = RideRequest["status"];
 
-// Only the driver of the ride can accept/decline; either party can complete.
+// Only the driver can accept/decline; either party can complete or cancel.
 export async function setRequestStatus(requestId: string, next: Next) {
   const me = await getProfile();
   if (!me) return jsonError("Sign in first.", 401);
@@ -22,7 +22,13 @@ export async function setRequestStatus(requestId: string, next: Next) {
 
   const isDriver = ride.driver_id === me.id;
   const isRider = rr.rider_id === me.id;
-  if (next === "completed" ? !(isDriver || isRider) : !isDriver) return jsonError("Not allowed.", 403);
+  const eitherParty = next === "completed" || next === "cancelled";
+  if (eitherParty ? !(isDriver || isRider) : !isDriver) return jsonError("Not allowed.", 403);
+  if (next === "cancelled" && !["pending", "accepted"].includes(rr.status)) return jsonError(`Request is already ${rr.status}.`, 409);
+  // Cancelling an accepted request frees the seat again.
+  if (next === "cancelled" && rr.status === "accepted") {
+    await admin.from("rides").update({ seats_available: ride.seats_available + 1 }).eq("id", ride.id);
+  }
 
   if (next === "accepted") {
     if (rr.status !== "pending") return jsonError(`Request is already ${rr.status}.`, 409);

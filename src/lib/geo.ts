@@ -38,3 +38,8 @@ export function pointAlong(path: LatLng[], t: number): LatLng {
 export function distanceToPathKm(p: LatLng, path: LatLng[]): number {
   return path.reduce((min, q) => Math.min(min, haversineKm(p, q)), Infinity);
 }
+
+// Rough city driving ETA: straight line x1.35 road factor at 30 km/h.
+export function etaMinutes(a: LatLng, b: LatLng): number {
+  return Math.max(1, Math.round(((haversineKm(a, b) * 1.35) / 30) * 60));
+}

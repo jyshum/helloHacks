@@ -19,6 +19,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const { error } = await admin.from("rides").update({ status }).eq("id", params.id);
   if (error) return jsonError(error.message, 500);
+  if (status === "cancelled") {
+    // Driver went offline: release anyone still waiting.
+    await admin.from("ride_requests").update({ status: "declined" }).eq("ride_id", params.id).eq("status", "pending");
+  }
   if (status === "completed") {
     await admin.from("ride_requests").update({ status: "completed" }).eq("ride_id", params.id).eq("status", "accepted");
   }

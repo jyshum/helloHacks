@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { MapDriver, MapRider } from "@/lib/demo";
 import { getProfile } from "@/lib/profile";
+import { freshSince } from "@/lib/quote";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,14 @@ export async function GET() {
       .from("rides")
       .select("*, driver:users!rides_driver_id_fkey(id, full_name, faculty)")
       .in("status", ["posted", "active"])
+      .gte("departure_time", freshSince())
       .order("departure_time", { ascending: true })
       .limit(50),
     admin
       .from("ride_requests")
       .select("*, rider:users!ride_requests_rider_id_fkey(id, full_name, faculty)")
       .eq("status", "pending")
+      .gte("created_at", freshSince())
       .limit(50),
   ]);
 
