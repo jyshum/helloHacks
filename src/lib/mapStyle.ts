@@ -1,0 +1,28 @@
+// Custom UBC-palette map. Pale blue-grey land, soft blue water, quiet labels.
+// Only applies when the Map has no mapId (cloud styling overrides this).
+export const UBC_MAP_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#F5F8FC" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6B7C93" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#F5F8FC" }, { weight: 3 }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#DCE4EE" }] },
+  { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative.neighborhood", elementType: "labels.text.fill", stylers: [{ color: "#8A9BB0" }] },
+  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#EEF3F9" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.park", stylers: [{ visibility: "on" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#E3EFE8" }] },
+  { featureType: "poi.park", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "poi.school", stylers: [{ visibility: "on" }] },
+  { featureType: "poi.school", elementType: "geometry", stylers: [{ color: "#E6F1FA" }] },
+  { featureType: "poi.school", elementType: "labels.text.fill", stylers: [{ color: "#0055B7" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#FFFFFF" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#E4EAF2" }] },
+  { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#8A9BB0" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#DCE4EE" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#C9D5E3" }] },
+  { featureType: "road.local", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#CFE3F3" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#8AAFCF" }] },
+];

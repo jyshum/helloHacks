@@ -1,7 +1,13 @@
-export default function MapPage() {
+import LiveMap from "@/components/map/LiveMap";
+import { requireProfile } from "@/lib/profile";
+
+export const dynamic = "force-dynamic";
+
+export default async function MapPage() {
+  const me = await requireProfile();
   return (
-    <main className="screen flex items-center justify-center">
-      <p className="text-muted">Map coming in Phase 3.</p>
-    </main>
+    <LiveMap
+      me={{ id: me.id, full_name: me.full_name ?? "UBC student", role: me.role, photo_url: me.photo_url }}
+    />
   );
 }
