@@ -28,12 +28,15 @@ export function usePresence(
   channelName: string,
   me: { id: string; role: Role; full_name: string },
   myPos: LatLng | null,
-  intervalMs = 3000
+  intervalMs = 3000,
+  share = true // false = watch others without broadcasting my own position
 ): PresenceUser[] {
   const [others, setOthers] = useState<PresenceUser[]>([]);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const posRef = useRef(myPos);
   posRef.current = myPos;
+  const shareRef = useRef(share);
+  shareRef.current = share;
 
   useEffect(() => {
     if (DEMO_MODE) return;
@@ -53,7 +56,7 @@ export function usePresence(
 
     const track = () => {
       const p = posRef.current;
-      if (p) channel.track({ user_id: me.id, role: me.role, name: me.full_name, lat: p.lat, lng: p.lng });
+      if (p && shareRef.current) channel.track({ user_id: me.id, role: me.role, name: me.full_name, lat: p.lat, lng: p.lng });
     };
     const t = setInterval(track, intervalMs);
     return () => {
@@ -63,11 +66,13 @@ export function usePresence(
     };
   }, [channelName, me.id, me.role, me.full_name, intervalMs]);
 
-  // Push immediately when location first arrives.
+  // Push immediately when location arrives; stop sharing the moment share turns off.
   useEffect(() => {
     const ch = channelRef.current;
-    if (ch && myPos) ch.track({ user_id: me.id, role: me.role, name: me.full_name, lat: myPos.lat, lng: myPos.lng });
-  }, [myPos, me.id, me.role, me.full_name]);
+    if (!ch) return;
+    if (!share) ch.untrack();
+    else if (myPos) ch.track({ user_id: me.id, role: me.role, name: me.full_name, lat: myPos.lat, lng: myPos.lng });
+  }, [share, myPos, me.id, me.role, me.full_name]);
 
   return others;
 }

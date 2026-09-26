@@ -25,7 +25,8 @@ const NEARBY_KM = 8;
 export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitchMode?: () => void }) {
   const router = useRouter();
   const myPos = useMyLocation();
-  const { drivers } = useLiveDrivers(me, myPos);
+  // Riders watch drivers but never broadcast their own location on the public map.
+  const { drivers } = useLiveDrivers(me, myPos, false);
 
   const [stage, setStage] = useState<Stage>("home");
   const [field, setField] = useState<Field>("dropoff");

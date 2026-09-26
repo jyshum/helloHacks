@@ -22,12 +22,16 @@ const STEP = 0.012;
 
 // Everyone on the map: posted rides (animated along their route) merged with
 // real positions from anyone who has the app open.
-export function useLiveDrivers(me: { id: string; role: Role; full_name: string }, myPos: LatLng | null) {
+export function useLiveDrivers(
+  me: { id: string; role: Role; full_name: string },
+  myPos: LatLng | null,
+  share: boolean // only online drivers broadcast their position
+) {
   const [rides, setRides] = useState<MapDriver[]>(DEMO_MODE ? DEMO_DRIVERS : []);
   const [riders, setRiders] = useState<MapRider[]>(DEMO_MODE ? DEMO_RIDERS : []);
   const [paths, setPaths] = useState<Record<string, LatLng[]>>({});
   const tick = useTick(3000);
-  const online = usePresence("map-presence", me, myPos);
+  const online = usePresence("map-presence", me, myPos, 3000, share);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/map-state", { cache: "no-store" });
@@ -99,7 +103,5 @@ export function useLiveDrivers(me: { id: string; role: Role; full_name: string }
     return list;
   }, [rides, paths, online, tick, me.id]);
 
-  const liveRiders = online.filter((u) => u.role === "rider");
-
-  return { drivers, riders, liveRiders, online, reload: load };
+  return { drivers, riders, reload: load };
 }

@@ -24,8 +24,8 @@ export type DriverMe = MenuUser & { faculty: string | null; year: number | null;
 export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitchMode?: () => void }) {
   const router = useRouter();
   const myPos = useMyLocation();
-  const { riders, liveRiders } = useLiveDrivers(me, myPos);
   const [ride, setRide] = useState<Ride | null>(null);
+  const { riders } = useLiveDrivers(me, myPos, !!ride);
   const [requests, setRequests] = useState<Req[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -116,10 +116,7 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
         pins={[
           ...(online
             ? requests.map((r) => ({ id: r.id, pos: { lat: r.pickup_lat, lng: r.pickup_lng }, kind: "pickup" as const }))
-            : [
-                ...riders.map((r) => ({ id: r.id, pos: r.pickup, kind: "rider" as const })),
-                ...liveRiders.map((u) => ({ id: u.user_id, pos: { lat: u.lat, lng: u.lng }, kind: "rider" as const })),
-              ]),
+            : riders.map((r) => ({ id: r.id, pos: r.pickup, kind: "rider" as const }))),
           ...(dest ? [{ id: "dest", pos: dest, kind: "dropoff" as const }] : []),
         ]}
         fit={online && origin && dest ? [origin, dest] : firstFix ? [firstFix] : null}
