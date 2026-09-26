@@ -9,14 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ivory: "#F6F3EC",
-        ink: "#1C2430",
-        navy: "#0E3A5F",
-        amber: "#E2A63B",
-        green: "#3F7D58",
-        clay: "#7C5B3D",
-        muted: "#8A8578",
-        line: "#E6E1D4",
+        // UBC palette. Driver = ubc (dark blue), rider = sky (bright blue).
+        paper: "#F5F8FC", // app background
+        ink: "#0B1B2E", // text
+        ubc: "#002145", // UBC Blue, primary + driver
+        blue: "#0055B7", // UBC secondary blue, links + focus
+        sky: "#00A7E1", // UBC light blue, rider accent + CTA
+        frost: "#E6F1FA", // pale blue fills
+        green: "#2E7D5B", // success + trust
+        muted: "#6B7C93", // secondary text
+        line: "#DCE4EE", // borders
       },
       fontFamily: {
         heading: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
