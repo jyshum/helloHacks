@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 import { podOptions } from "@/lib/pods/match";
+import { arriveOn, fromMinutes } from "@/lib/pods/time";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -19,6 +20,7 @@ export type PodCard = {
   days: number[];
   pickupLabel: string;
   pickupTime: string;
+  arriveBy: string; // driver's arrival on your first shared day
   driveMinutes: number;
   transitMinutes: number | null;
 };
@@ -33,16 +35,17 @@ export async function GET() {
   const admin = createAdminClient();
   const podIds = options.map((o) => o.podId);
   const driverIds = options.map((o) => o.driverId);
-  const [{ data: drivers }, { data: cars }, { data: profiles }, { data: members }] = await Promise.all([
+  const [{ data: drivers }, { data: cars }, { data: profiles }, { data: members }, { data: podRows }] = await Promise.all([
     admin.from("users").select("id, full_name, photo_url, faculty, year, rating_avg, license_verified").in("id", driverIds),
     admin.from("vehicles").select("user_id, make_model, color, photo_url").in("user_id", driverIds),
-    admin.from("commute_profiles").select("user_id, home_area, campus_label, seats").in("user_id", driverIds),
+    admin.from("commute_profiles").select("user_id, home_area, campus_label, seats, arrive_by, day_times").in("user_id", driverIds),
     admin
       .from("pod_members")
       .select("pod_id, user_id, status, user:users!pod_members_user_id_fkey(id, full_name, photo_url)")
       .in("pod_id", podIds)
       .eq("role", "rider")
       .in("status", ["invited", "requested", "active"]),
+    admin.from("pods").select("id, campus_label").in("id", podIds),
   ]);
 
   const pods: PodCard[] = options.map((o) => {
@@ -56,7 +59,7 @@ export async function GET() {
       driver: { ...d, rating_avg: Number(d.rating_avg ?? 5), license_verified: !!d.license_verified },
       car: cars?.find((c) => c.user_id === o.driverId) ?? null,
       area: p?.home_area ?? null,
-      campus: p?.campus_label ?? "UBC",
+      campus: podRows?.find((x) => x.id === o.podId)?.campus_label ?? p?.campus_label ?? "UBC",
       riders: inPod
         .filter((m) => m.status === "active")
         .map((m) => m.user as unknown as PodCard["riders"][number])
@@ -65,6 +68,7 @@ export async function GET() {
       days: o.fit.days,
       pickupLabel: o.fit.pickupLabel,
       pickupTime: o.fit.pickupTime,
+      arriveBy: p ? fromMinutes(arriveOn({ arrive_by: p.arrive_by, day_times: p.day_times ?? {} }, o.fit.days[0])) : "09:00",
       driveMinutes: o.fit.driveMinutes,
       transitMinutes: o.fit.transitMinutes,
     };

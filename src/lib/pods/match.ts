@@ -335,8 +335,11 @@ export async function matchRider(riderId: string): Promise<boolean> {
   return true;
 }
 
-// Rider picks a pod. Seeded drivers can't approve, so those riders go straight in.
-export async function requestToJoin(riderId: string, podId: string): Promise<{ status: "requested" | "active" } | { error: string }> {
+// How one pod fits a rider (for the preview and for joining). No writes except caches.
+export async function fitFor(
+  riderId: string,
+  podId: string
+): Promise<{ fit: Fit; driver: Profile; rider: Profile } | { error: string }> {
   const admin = createAdminClient();
   const { data: pod } = await admin.from("pods").select("id, driver_id, status").eq("id", podId).maybeSingle();
   if (!pod || pod.status !== "active") return { error: "That pod isn't available any more." };
@@ -348,10 +351,19 @@ export async function requestToJoin(riderId: string, podId: string): Promise<{ s
   const open = profile.days.filter((day) => !covered.days.has(day));
   if (!open.length) return { error: "All your days already have a pod." };
   const r: Profile = { ...profile, days: open };
-  if ((await seatsLeft(podId, d.seats, riderId)) <= 0) return { error: "That pod just filled up." };
   const users = await loadUsers([riderId, d.user_id]);
   const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
-  if (!fit) return { error: "That pod no longer fits your schedule." };
+  if (!fit) return { error: "That pod doesn't fit your schedule." };
+  return { fit, driver: d, rider: r };
+}
+
+// Rider picks a pod. Seeded drivers can't approve, so those riders go straight in.
+export async function requestToJoin(riderId: string, podId: string): Promise<{ status: "requested" | "active" } | { error: string }> {
+  const admin = createAdminClient();
+  const res = await fitFor(riderId, podId);
+  if ("error" in res) return res;
+  const { fit, driver: d } = res;
+  if ((await seatsLeft(podId, d.seats, riderId)) <= 0) return { error: "That pod just filled up." };
 
   const { data: driver } = await admin.from("users").select("auth_id").eq("id", d.user_id).single();
   const status = driver?.auth_id ? "requested" : "active";

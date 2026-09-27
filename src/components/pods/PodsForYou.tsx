@@ -4,7 +4,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Car, ChevronRight, Pencil, Search, Timer, Zap } from "lucide-react";
+import { ArrowRight, BadgeCheck, Car, ChevronRight, Pencil, Search, Timer, Zap } from "lucide-react";
+import PodPreview from "@/components/pods/PodPreview";
+import { shortCampus } from "@/lib/places";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import Avatar from "@/components/Avatar";
 import { prettyTime } from "@/lib/pods/time";
@@ -13,7 +15,7 @@ import type { PodCard } from "@/app/api/pods/options/route";
 const DAY = ["", "M", "T", "W", "T", "F"];
 const DAY_NAME = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
 
-export type MyPod = { podId: string; status: "active" | "requested"; days: number[]; driver: { id: string; full_name: string; photo_url: string | null } };
+export type MyPod = { podId: string; status: "active" | "requested"; days: number[]; campus: string; arriveBy: string | null; driver: { id: string; full_name: string; photo_url: string | null } };
 
 type Props = { me: MenuUser; area: string; arriveBy: string; myPods: MyPod[]; openDays: number[] };
 
@@ -21,6 +23,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
   const router = useRouter();
   const [pods, setPods] = useState<PodCard[] | null>(null);
   const [joining, setJoining] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Re-fetch whenever the days still needing a pod change (e.g. right after joining one).
@@ -45,6 +48,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
       return setError(body.error ?? "Couldn't join.");
     }
     setJoining(null);
+    setPreview(null);
     router.refresh();
   }
 
@@ -73,6 +77,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                   <span className="block font-semibold text-ink">{p.driver.full_name.split(" ")[0]}&apos;s pod</span>
                   <span className="block text-[13px] text-muted">
                     {p.days.map((d) => DAY_NAME[d]).join(", ")}
+                    {p.arriveBy && ` · ${shortCampus(p.campus)} by ${prettyTime(p.arriveBy)}`}
                     {p.status === "requested" && " · Pending"}
                   </span>
                 </span>
@@ -108,9 +113,17 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
         {pods?.map((p, i) => {
           const saved = p.transitMinutes != null ? p.transitMinutes - p.driveMinutes : null;
           return (
-            <div key={p.podId} className="card rise p-5" style={{ animationDelay: `${i * 70}ms` }}>
+            <div
+              key={p.podId}
+              role="button"
+              tabIndex={0}
+              onClick={() => setPreview(p.podId)}
+              onKeyDown={(e) => e.key === "Enter" && setPreview(p.podId)}
+              className="card rise cursor-pointer p-5 transition active:scale-[0.99]"
+              style={{ animationDelay: `${i * 70}ms` }}
+            >
               <div className="flex items-center gap-3">
-                <Link href={`/profile/${p.driver.id}`} className="relative">
+                <Link href={`/profile/${p.driver.id}`} onClick={(e) => e.stopPropagation()} className="relative">
                   <Avatar name={p.driver.full_name} photoUrl={p.driver.photo_url} size={52} />
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-ubc text-white">
                     <Car size={11} aria-hidden />
@@ -145,7 +158,14 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                     </span>
                   ))}
                 </div>
-                <span className="text-[15px] font-semibold text-ink">{prettyTime(p.pickupTime)}</span>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 text-[15px]">
+                <span className="font-semibold text-ink">{prettyTime(p.pickupTime)}</span>
+                <span className="text-muted">pickup</span>
+                <ArrowRight size={15} className="text-muted/60" aria-hidden />
+                <span className="font-semibold text-ink">{shortCampus(p.campus)}</span>
+                <span className="text-muted">by {prettyTime(p.arriveBy)}</span>
               </div>
 
               <div className="mt-4 flex items-center justify-between">
@@ -162,7 +182,14 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                 {p.invited && <span className="chip bg-sky/15 text-blue">Invited you</span>}
               </div>
 
-              <button onClick={() => join(p.podId)} disabled={!!joining} className="btn-ubc mt-4 w-full">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  join(p.podId);
+                }}
+                disabled={!!joining}
+                className="btn-ubc mt-4 w-full"
+              >
                 {joining === p.podId ? "Joining…" : "Join"}
               </button>
             </div>
@@ -179,6 +206,17 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
           </div>
         )}
       </div>
+
+      {preview && (
+        <PodPreview
+          podId={preview}
+          meName={me.full_name}
+          mePhoto={me.photo_url}
+          joining={joining === preview}
+          onJoin={() => join(preview)}
+          onClose={() => setPreview(null)}
+        />
+      )}
 
       <Link href="/map" className="mx-auto mt-8 flex w-fit items-center gap-1.5 text-sm font-semibold text-blue">
         <Zap size={15} aria-hidden /> Ride today

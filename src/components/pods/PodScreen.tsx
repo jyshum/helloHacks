@@ -13,7 +13,9 @@ import Avatar from "@/components/Avatar";
 import SharedBadge from "@/components/SharedBadge";
 import EnableNotifications from "@/components/pods/EnableNotifications";
 import { decodePolyline, type LatLng } from "@/lib/geo";
-import { dayWord, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
+import { arriveOn, dayWord, fromMinutes, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
+import { shortCampus } from "@/lib/places";
+import type { Weekday } from "@/lib/pods/types";
 
 import type { MemberView, PodView } from "@/lib/pods/load";
 
@@ -78,6 +80,9 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
   const fit: LatLng[] = route.length ? [route[0], campus] : [campus];
   const driverName = first(driver.user.full_name);
   const shown = view.reliability.completed + view.reliability.missed;
+  // Arrival for your next ride (days can have different times).
+  const nextDay = nextTrip ? (new Date(`${nextTrip.date}T12:00:00Z`).getUTCDay() as Weekday) : null;
+  const arriveTime = nextDay ? fromMinutes(arriveOn(driverProfile, nextDay)) : driverProfile.arrive_by;
 
   return (
     <div className="relative min-h-[100dvh]">
@@ -146,13 +151,11 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
         {inPod && (
           <div className="rise">
             <h1 className="text-[28px] font-bold leading-tight text-ubc">
-              {driverProfile.home_area ?? "Home"} <span className="text-muted/50">→</span> UBC
+              {shortCampus(pod.campus_label)} by {prettyTime(arriveTime)}
             </h1>
-            <div className="mt-3 flex items-center justify-between">
-              <DayDots days={driverProfile.days} />
-              <span className="flex items-center gap-1.5 text-[15px] font-semibold text-ink">
-                <Clock size={15} className="text-muted" aria-hidden /> {prettyTime(driverProfile.arrive_by)}
-              </span>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-[15px] text-muted">from {driverProfile.home_area ?? "home"}</p>
+              <DayDots days={isDriver ? driverProfile.days : mine.days} />
             </div>
 
             {nextTrip && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}

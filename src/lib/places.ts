@@ -26,3 +26,16 @@ export const CAMPUS_SPOTS: Place[] = [
   { label: "Thunderbird Park", lat: 49.2567, lng: -123.2438 },
   { label: "Totem Park Residence", lat: 49.2604, lng: -123.2522 },
 ];
+
+// Short campus names for tight UI ("Nest by 9:00am").
+const SHORT: Record<string, string> = {
+  "UBC Bus Exchange": "Bus Loop",
+  "Nest (AMS Student Nest)": "Nest",
+  "Irving K. Barber Library": "IKB",
+  "Life Sciences Centre": "Life Sci",
+  "Thunderbird Park": "Thunderbird",
+  "Totem Park Residence": "Totem Park",
+};
+export function shortCampus(label: string | null | undefined): string {
+  return (label && SHORT[label]) || label || "UBC";
+}

@@ -109,6 +109,10 @@ function CameraFit({ points, bottomPadding }: { points?: LatLng[] | null; bottom
     const b = new google.maps.LatLngBounds();
     points.forEach((p) => b.extend(p));
     map.fitBounds(b, { top: 110, left: 50, right: 50, bottom: bottomPadding + 30 });
+    // Points right next to each other (e.g. driver at the pickup) would zoom in too far.
+    google.maps.event.addListenerOnce(map, "idle", () => {
+      if ((map.getZoom() ?? 0) > 16) map.setZoom(16);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, key, bottomPadding]);
   return null;
