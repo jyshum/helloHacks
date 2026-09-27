@@ -62,7 +62,7 @@ export default function ProfileMenu({
 
       {open && mounted && createPortal(
         <div className="fixed inset-0 z-[100] flex">
-          <div className="flex h-full w-[84%] max-w-[340px] flex-col border-r border-white/60 bg-white/75 shadow-lift backdrop-blur-2xl backdrop-saturate-150 animate-[slidein_.22s_cubic-bezier(0.2,0.8,0.2,1)]">
+          <div className="relative z-10 flex h-full w-[84%] max-w-[340px] flex-col border-r border-white/60 bg-white/75 shadow-lift backdrop-blur-2xl backdrop-saturate-150 animate-[slidein_.38s_cubic-bezier(0.32,0.72,0,1)]">
             <Link href="/profile/me" onClick={() => setOpen(false)} className="px-5 pb-6 pt-12">
               <Avatar name={me.full_name} photoUrl={me.photo_url} size={64} tone={mode} />
               <p className="mt-3 text-2xl font-bold tracking-tight text-ubc">{me.full_name}</p>
@@ -109,7 +109,7 @@ export default function ProfileMenu({
               Sign out
             </button>
           </div>
-          <button className="flex-1 bg-ink/25 backdrop-blur-[2px]" aria-label="Close menu" onClick={() => setOpen(false)} />
+          <button className="fade-in flex-1 bg-ink/25 backdrop-blur-[2px]" aria-label="Close menu" onClick={() => setOpen(false)} />
         </div>,
         document.body
       )}

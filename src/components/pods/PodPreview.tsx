@@ -70,6 +70,12 @@ export default function PodPreview({
   const [data, setData] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [day, setDay] = useState<number | null>(null);
+  const [closing, setClosing] = useState(false);
+  // Slide down first, then unmount.
+  const close = () => {
+    setClosing(true);
+    setTimeout(onClose, 250);
+  };
 
   useEffect(() => {
     fetch(`/api/pods/${podId}/preview`, { cache: "no-store" })
@@ -86,10 +92,10 @@ export default function PodPreview({
   const sameFaculty = data ? data.riders.filter((r) => r.faculty && r.faculty === data.me.faculty).length + (data.driver.faculty === data.me.faculty ? 1 : 0) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-ink/20 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex flex-col" onClick={close}>
+      <div className={`absolute inset-0 bg-ink/25 ${closing ? "fade-out" : "fade-in"}`} aria-hidden />
       <div
-        className="relative mx-auto mt-auto flex h-[92dvh] w-full max-w-app flex-col overflow-hidden rounded-t-[32px] border border-white/70 bg-[#f7f9fc]/[0.97] shadow-lift backdrop-blur-2xl backdrop-saturate-150"
-        style={{ animation: "sheetup .28s cubic-bezier(.2,.8,.2,1)" }}
+        className={`relative mx-auto mt-auto flex h-[92dvh] w-full max-w-app flex-col overflow-hidden rounded-t-[32px] border border-white/70 bg-[#f7f9fc]/[0.97] shadow-lift backdrop-blur-2xl backdrop-saturate-150 ${closing ? "sheet-out" : "sheet-in"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Map: your pickup → campus */}
@@ -114,7 +120,7 @@ export default function PodPreview({
               </BaseMap>
             </APIProvider>
           )}
-          <button onClick={onClose} className="glass absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full" aria-label="Close">
+          <button onClick={close} className="glass absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full" aria-label="Close">
             <X size={18} aria-hidden />
           </button>
         </div>

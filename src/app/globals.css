@@ -55,19 +55,38 @@ h1, h2, h3, h4 {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
+/* Sheets slide all the way up from the bottom edge, iOS-style curve. */
 @keyframes sheetup {
-  from { transform: translateY(24px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes sheetdown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeout {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 @keyframes fadeup {
   from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+/* New screen slides in from the right. No fill-mode, so no transform is left behind
+   (a leftover transform would break position: fixed children like sheets and menus). */
+@keyframes pagein {
+  from { transform: translateX(24%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
 
 @layer components {
   .sheet {
     @apply glass fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-app rounded-t-[32px] border-b-0 bg-white/70 px-5 pb-8 pt-3 shadow-[0_-12px_40px_rgba(0,33,69,0.12)];
-    animation: sheetup 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: sheetup 0.42s cubic-bezier(0.32, 0.72, 0, 1);
   }
   .sheet-handle {
     @apply mx-auto mb-4 h-1.5 w-10 rounded-full bg-ink/10;
@@ -81,9 +100,30 @@ h1, h2, h3, h4 {
   .rise {
     animation: fadeup 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
+  .page-in {
+    animation: pagein 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-in {
+    animation: sheetup 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .sheet-out {
+    animation: sheetdown 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+  .fade-in {
+    animation: fadein 0.3s ease-out;
+  }
+  .fade-out {
+    animation: fadeout 0.26s ease-in forwards;
+  }
 }
 
 @layer utilities {
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+  }
 }
