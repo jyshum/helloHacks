@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, BadgeCheck, Clock, House, IdCard, ShieldCheck, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BadgeCheck, Clock, House, IdCard, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Avatar from "@/components/Avatar";
@@ -78,7 +78,8 @@ export default function ProfileMenu({
             </Link>
 
             <nav className="flex flex-col py-2">
-              <MenuItem href="/map" label="Home" icon={House} onClick={() => setOpen(false)} />
+              <MenuItem href="/pods" label="My pod" icon={Users} onClick={() => setOpen(false)} />
+              <MenuItem href="/map" label="Ride today (on demand)" icon={House} onClick={() => setOpen(false)} />
               <MenuItem href="/trips" label="Your trips" icon={Clock} onClick={() => setOpen(false)} />
               {me.isAdmin && (
                 <Link href="/admin" onClick={() => setOpen(false)} className="flex items-center gap-4 px-5 py-4 font-medium text-ink hover:bg-paper">

@@ -24,8 +24,7 @@ export async function syncVerified(
   };
 }
 
-// Where a verified user goes next. Everyone lands on the ride/drive chooser;
-// license verification is offered from driver mode instead of forced here.
+// Where a verified user goes next: their commute pod (onboarding if they haven't set one up).
 export function nextPathFor(): string {
-  return "/map";
+  return "/pods";
 }

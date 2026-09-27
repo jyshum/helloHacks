@@ -43,3 +43,41 @@ export function distanceToPathKm(p: LatLng, path: LatLng[]): number {
 export function etaMinutes(a: LatLng, b: LatLng): number {
   return Math.max(1, Math.round(((haversineKm(a, b) * 1.35) / 30) * 60));
 }
+
+// Decodes a Google encoded polyline into points.
+export function decodePolyline(encoded: string): LatLng[] {
+  const points: LatLng[] = [];
+  let i = 0, lat = 0, lng = 0;
+  while (i < encoded.length) {
+    for (const coord of [0, 1]) {
+      let shift = 0, result = 0, b: number;
+      do {
+        b = encoded.charCodeAt(i++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const delta = result & 1 ? ~(result >> 1) : result >> 1;
+      if (coord === 0) lat += delta;
+      else lng += delta;
+    }
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+
+// Closest point on a path to p (checks every segment, not just vertices).
+export function closestPointOnPath(p: LatLng, path: LatLng[]): { point: LatLng; km: number; index: number } {
+  let best = { point: path[0] ?? p, km: Infinity, index: 0 };
+  const kx = Math.cos((p.lat * Math.PI) / 180); // flatten lng at this latitude
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i], b = path[i + 1];
+    const ax = a.lng * kx, ay = a.lat, bx = b.lng * kx, by = b.lat, px = p.lng * kx, py = p.lat;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+    const q = { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
+    const km = haversineKm(p, q);
+    if (km < best.km) best = { point: q, km, index: i };
+  }
+  return best;
+}

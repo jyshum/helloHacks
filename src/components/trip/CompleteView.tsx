@@ -45,6 +45,7 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
         <p className="mt-1 text-muted">{request.pickup_label} → {request.dropoff_label}</p>
       </div>
 
+      {request.estimated_cost_cents != null && (
       <div className="card mt-6 flex items-center justify-between p-5">
         <div>
           <p className="text-sm text-muted">Gas contribution</p>
@@ -55,6 +56,7 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
           {viewer === "rider" ? "Paid" : "Received"}
         </span>
       </div>
+      )}
 
       <div className="card mt-4 p-5 text-center">
         <div className="flex justify-center">
