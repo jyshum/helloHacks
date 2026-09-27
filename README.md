@@ -87,6 +87,31 @@ flowchart TB
     API -. "fallback" .-> GMAIL
 ```
 
+### Trade-offs
+
+| Decision | Why | Cost |
+|---|---|---|
+| **Weekly pods, not on-demand** | Needs only a few drivers on a route, not many online at the same minute. Same people every week. | Less flexible for one-off trips. |
+| **Cheap filter, then Google** | Local maths (distance to a cached route, arrival times) removes most candidates; Google only checks the shortlist. | A rider right at the 3.5 km edge could be missed. |
+| **All writes through API routes** | One place for the rules; the browser can't write tables. | Every action is a server round trip. |
+| **Payment inside Postgres** (`settle_ride()`) | Locked, all-or-nothing, at most once. Two racing requests can't double charge. | Logic split between TypeScript and SQL. |
+| **Realtime broadcast for GPS** | Presence cut clients off after ~6 updates / 30 s; broadcast handles 1/s. | No history, so senders re-send a heartbeat and stale positions expire. |
+
+### Fallbacks
+
+| If… | Then… |
+|---|---|
+| Google Directions fails | Drive and detour times fall back to a straight-line estimate; matching keeps working. |
+| Transit lookup fails | The "time saved" comparison is hidden. |
+| Push isn't available | Important notices go by email. Chat and payment notices don't. |
+| The same trip is completed twice | Charged once. |
+| A wallet is too low | Auto top-up before the charge; nobody owes money. |
+| The driver is late or doesn't show | Riders see it, the driver gets one nudge, riders can report it and find a backup pod. |
+| The driver pauses | Riders keep their spots for 7 days; the nightly cron closes the pod after that. |
+| A rider opens the map late | The car's last position is re-sent every few seconds; stale positions drop after 15 s. |
+
+More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#edge-cases-and-fallbacks).
+
 ## How it works
 
 **Drivers** say where they live, which days they drive, when they need to be on campus (per day), when they head home, and add their car. Hopped fills their empty seats with riders on their way.
