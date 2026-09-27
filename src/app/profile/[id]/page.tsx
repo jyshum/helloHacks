@@ -126,7 +126,8 @@ export default async function ProfilePage({ params }: { params: { id: string } }
         </div>
 
         {isMe && (
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col gap-3">
+            <Link href="/settings" className="btn-ubc w-full">Edit profile</Link>
             <SignOutButton />
           </div>
         )}
