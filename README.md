@@ -13,6 +13,14 @@
   <a href="https://hellohacks-coral.vercel.app"><b>Try it live</b></a>
 </p>
 
+<p align="center">
+  <a href="#system-at-a-glance">System at a glance</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/ARCHITECTURE.md#edge-cases-and-fallbacks">Edge cases</a> ·
+  <a href="docs/ARCHITECTURE.md#trade-offs">Trade-offs</a> ·
+  <a href="#run-it-locally">Run it</a>
+</p>
+
 ---
 
 ## What it is
@@ -42,6 +50,52 @@ Then, week to week:
 - **Live trips:** the driver taps *Start pickup*, riders watch the car on the map, get "Alex is here", and the trip ends by itself on arrival.
 - **Automatic payment:** the rider's wallet is charged when the trip ends and the driver is paid. Nobody owes anyone. *(Demo money for now; see below.)*
 - **Pod chat, notifications, ratings, reliability** ("showed up 14/14"), **pause driving** (riders keep their spots for 7 days), and a **commuter directory** to find people directly.
+
+## System at a glance
+
+The whole flow in one picture: what happens at each step, the main design choice behind it, and what happens when something goes wrong. The full write-up (data model, matching, trip day, payments, live location, privacy, every edge case) is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+```mermaid
+flowchart TB
+  subgraph setup["1 · Set up"]
+    signup["Sign up<br/>UBC email only"]
+    onboard["Commute<br/>home · days · per-day times<br/>ride-home time · car"]
+    verify["Driver check<br/>licence + car photo,<br/>reviewed by a person"]
+  end
+
+  subgraph match["2 · Match"]
+    quick["Quick filter, no API calls<br/>same campus · on time (0-20 min early)<br/>home ≤ 3.5 km from route"]
+    full["Google check on the shortlist<br/>detour ≤ 8 min · transit time"]
+    options["Pods for you / Riders for you<br/>ranked by fit"]
+  end
+
+  subgraph pod["3 · Pod (weekly)"]
+    preview["Preview<br/>route · pickup & arrival · time saved · price"]
+    join["Join → driver approves live"]
+    days["Each day: I'm in / Don't need a ride<br/>to campus + ride home"]
+  end
+
+  subgraph trip["4 · Trip day"]
+    confirm["Nightly cron:<br/>driver confirms"]
+    live["Start pickup → live car on map<br/>(Realtime broadcast)"]
+    arrive["Pickup checklist →<br/>auto-ends at campus"]
+  end
+
+  subgraph pay["5 · Pay"]
+    settle["settle_ride() in Postgres<br/>locked · once only · auto top-up"]
+    receipt["Receipts + chat line<br/>driver gets $5 + gas"]
+  end
+
+  signup --> onboard --> quick --> full --> options --> preview --> join --> days --> confirm --> live --> arrive --> settle --> receipt
+  onboard -.-> verify
+
+  t1(["Trade-off: pods over on-demand<br/>needs few drivers, same people weekly"]) -.- options
+  t2(["Trade-off: cheap filter first<br/>fast + cheap, may miss edge cases"]) -.- quick
+  t3(["Trade-off: money in the database<br/>double charges impossible"]) -.- settle
+  t4(["Trade-off: broadcast not presence<br/>presence froze after ~6 updates / 30 s"]) -.- live
+  f1(["Fallback: Google down →<br/>straight-line estimate"]) -.- full
+  f2(["Fallback: driver late / no-show →<br/>nudge, report, backup pod"]) -.- confirm
+```
 
 ## Pricing
 
