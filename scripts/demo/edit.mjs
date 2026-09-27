@@ -25,51 +25,41 @@ const C = (key, dt = 0) => cue(key) + dt;
 // ---- The cut -------------------------------------------------------------------------------
 // layout: "driver" | "rider" (one phone, centred) | "split" (both). active: which phone is lit.
 // Times are wall-clock seconds of the recording (both phones share one clock).
-// Driver and rider onboard side by side: the rider's footage is shifted (lag) to line up.
-const lagAt = (driverCue, riderCue) => C(riderCue) - C(driverCue);
+// One phone at a time, near real speed. Only typing and driving are sped up.
+// Cut on purpose: the signup form, the rider's onboarding (same screens), the wallet top-up
+// (the end receipt shows the auto-payment), and dead time between screens.
 const plan = [
-  { card: "title", dur: 1.8 },
+  { card: "title", dur: 2 },
 
-  // BOTH: open the app and sign up at the same time. Typing sped up.
-  { layout: "split", active: "both", from: C("driver:landing", -0.1), to: C("driver:signup"), speed: 1.1,
-    lag: { rider: lagAt("driver:landing", "rider:landing") } },
-  { layout: "split", active: "both", from: C("driver:signup"), to: C("driver:faculty_year", 1.8), speed: 2.2,
-    lag: { rider: lagAt("driver:faculty_year", "rider:faculty_year") } },
-  // (cut: "check your inbox" → the verification link) BOTH onboard: driver with car, rider finds pods.
-  { layout: "split", active: "both", from: C("driver:verified", 0.3), to: C("driver:schedule_set", 0.4), speed: 1.4,
-    lag: { rider: lagAt("driver:verified", "rider:verified") } },
-  { layout: "split", active: "driver", from: C("driver:schedule_set", 0.4), to: C("driver:pod_ready", 1.0), speed: 1.6,
-    lag: { rider: lagAt("driver:schedule_set", "rider:schedule_set") }, hold: { rider: C("rider:pods_for_you", 0.8) },
-    zoom: { who: "driver", from: C("driver:ride_home_step", -0.2), to: C("driver:car", -0.3), scale: 1.15, origin: [50, 30] } },
+  // DRIVER: landing → tap Get started → (signup cut) → onboarding.
+  { layout: "driver", from: C("driver:landing", -0.1), to: C("driver:signup", 0.2), speed: 1 },
+  { layout: "driver", from: C("driver:verified", 0.3), to: C("driver:car", 0.2), speed: 1,
+    zoom: { who: "driver", from: C("driver:ride_home_step", -0.2), to: C("driver:car", -0.3), scale: 1.12, origin: [50, 35] } },
+  { layout: "driver", from: C("driver:car", 0.2), to: C("driver:pod_ready", 1.2), speed: 1.7 },
 
-  // RIDER: preview the driver's pod (route, times, price), ask to join.
-  { layout: "rider", from: C("rider:pods_for_you", 0.8), to: C("rider:pending", -0.4), speed: 1.05,
-    zoom: { who: "rider", from: C("rider:fare_breakdown", -0.4), to: C("rider:pending", -0.6), scale: 1.3, origin: [50, 80] } },
-  { layout: "rider", from: C("rider:pending", -0.4), to: C("rider:asked", 0.9), speed: 1.2 },
+  // RIDER: (onboarding cut) finds the driver's pod, previews it, joins.
+  { layout: "rider", from: C("rider:pods_for_you", -0.3), to: C("rider:pending", 0.9), speed: 1,
+    zoom: { who: "rider", from: C("rider:fare_breakdown", -0.4), to: C("rider:pending", -0.6), scale: 1.25, origin: [50, 80] } },
 
-  // DRIVER POV: the request lands live; approve.
+  // DRIVER: the request lands live; approve.
   { layout: "driver", from: C("driver:request_arrives", -0.8), to: C("driver:approved", 1.0), speed: 1,
-    zoom: { who: "driver", from: C("driver:request_arrives", -0.5), to: C("driver:approved", 1.0), scale: 1.28, origin: [50, 72] } },
-  // RIDER POV: you're in the pod (cut the wait).
-  { layout: "rider", from: C("rider:in_pod", -0.6), to: C("rider:in_pod", 1.6), speed: 1 },
-  // Ride home: tap in for Monday.
-  { layout: "rider", from: C("rider:ride_home_sheet", -1.0), to: C("rider:ride_home_in", 0.7), speed: 1.15,
-    zoom: { who: "rider", from: C("rider:ride_home_sheet", -0.3), to: C("rider:ride_home_in", 0.6), scale: 1.18, origin: [50, 48] } },
-  // Demo wallet top-up.
-  { layout: "rider", from: C("rider:wallet", -0.3), to: C("rider:paid", 1.3), speed: 1.2,
-    zoom: { who: "rider", from: C("rider:paying", -0.5), to: C("rider:paid", 1.3), scale: 1.3, origin: [50, 86] } },
+    zoom: { who: "driver", from: C("driver:request_arrives", -0.5), to: C("driver:approved", 1.0), scale: 1.25, origin: [50, 72] } },
+  // RIDER: in the pod; taps in for the ride home.
+  { layout: "rider", from: C("rider:in_pod", -0.5), to: C("rider:in_pod", 1.5), speed: 1 },
+  { layout: "rider", from: C("rider:ride_home_sheet", -1.0), to: C("rider:ride_home_in", 0.7), speed: 1,
+    zoom: { who: "rider", from: C("rider:ride_home_sheet", -0.3), to: C("rider:ride_home_in", 0.6), scale: 1.15, origin: [50, 48] } },
 
-  // TRIP DAY. Driver starts; rider watches the car come; pickup; campus; auto-pay.
+  // TRIP DAY.
   { layout: "driver", from: C("driver:start_pickup", -1.0), to: C("driver:driving", 0.5), speed: 1,
-    zoom: { who: "driver", from: C("driver:start_pickup", -1.0), to: C("driver:start_pickup", 0.5), scale: 1.2, origin: [50, 55] } },
+    zoom: { who: "driver", from: C("driver:start_pickup", -1.0), to: C("driver:start_pickup", 0.5), scale: 1.15, origin: [50, 55] } },
   { layout: "rider", from: C("rider:tracking", 0.6), to: C("rider:driver_here", -0.3), speed: 3 },
-  { layout: "rider", from: C("rider:driver_here", -0.3), to: C("rider:driver_here", 1.9), speed: 1,
-    zoom: { who: "rider", from: C("rider:driver_here", -0.3), to: C("rider:driver_here", 1.9), scale: 1.22, origin: [50, 62] } },
-  { layout: "driver", from: C("driver:picked_up", -1.7), to: C("driver:picked_up", 0.6), speed: 1,
-    zoom: { who: "driver", from: C("driver:picked_up", -1.7), to: C("driver:picked_up", 0.6), scale: 1.22, origin: [50, 80] } },
+  { layout: "rider", from: C("rider:driver_here", -0.3), to: C("rider:driver_here", 2.0), speed: 1,
+    zoom: { who: "rider", from: C("rider:driver_here", -0.3), to: C("rider:driver_here", 2.0), scale: 1.18, origin: [50, 62] } },
+  { layout: "driver", from: C("driver:picked_up", -1.8), to: C("driver:picked_up", 0.6), speed: 1,
+    zoom: { who: "driver", from: C("driver:picked_up", -1.8), to: C("driver:picked_up", 0.6), scale: 1.18, origin: [50, 80] } },
   { layout: "driver", from: C("driver:picked_up", 0.6), to: C("driver:arrived", -0.3), speed: 6 },
-  { layout: "driver", from: C("driver:arrived", -0.3), to: C("driver:arrived", 2.5), speed: 1 },
-  { layout: "rider", from: C("rider:receipt", -0.6), to: C("rider:receipt", 2.6), speed: 1 },
+  { layout: "driver", from: C("driver:arrived", -0.3), to: C("driver:arrived", 2.6), speed: 1 },
+  { layout: "rider", from: C("rider:receipt", -0.6), to: C("rider:receipt", 2.8), speed: 1 },
   { card: "end", dur: 2.4 },
 ];
 
@@ -136,6 +126,11 @@ function stateAt(t) {
   // Glide from the previous layout over the first 0.5 s of a clip.
   const prev = segs[i - 1];
   if (prev && !prev.card && (prev.layout !== s.layout || prev.active !== s.active)) now = blend(place(prev.layout, prev.active), now, ease(local / 0.5));
+  // The phone sliding out keeps showing its last frame from the previous clip.
+  if (prev && !prev.card && prev.layout !== s.layout && local < 0.5 && s.layout !== "split") {
+    const out = s.layout === "driver" ? "rider" : "driver";
+    st.times[out] = timesOf(prev, prev.to)[out];
+  }
   if (prev?.card) {
     st.card = prev.card;
     st.cardOp = Math.max(0, 1 - local / 0.35);
