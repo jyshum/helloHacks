@@ -8,7 +8,7 @@ import { BadgeCheck, CalendarX, GraduationCap, House, MessageCircle, Wallet as W
 import BaseMap from "@/components/app/BaseMap";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
-import { prettyTime } from "@/lib/pods/time";
+import { prettyDuration, prettyTime } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { formatCents, type Fare } from "@/lib/pricing";
 import FareBreakdown from "@/components/trip/FareBreakdown";
@@ -42,6 +42,7 @@ type Preview = {
   schedule: {
     day: number;
     state: "fit" | "off" | "none";
+    arriveAt: string | null;
     homeLeave: string | null;
     ok: boolean;
     note: string | null;
@@ -157,9 +158,9 @@ export default function PodPreview({
               {saved != null && saved >= 5 && (
                 <div className="mt-4 flex items-center justify-between rounded-2xl bg-green/10 px-4 py-3 text-green">
                   <span className="flex items-center gap-2 text-lg font-semibold">
-                    <Timer size={19} aria-hidden /> {saved} min saved
+                    <Timer size={19} aria-hidden /> {prettyDuration(saved)} saved
                   </span>
-                  <span className="text-sm">Bus {data.fit.transitMinutes} → {data.fit.driveMinutes}</span>
+                  <span className="text-sm">Bus {prettyDuration(data.fit.transitMinutes!)} → {prettyDuration(data.fit.driveMinutes)}</span>
                 </div>
               )}
 
@@ -208,8 +209,8 @@ export default function PodPreview({
                     <Line icon={<MapPin size={18} aria-hidden />} title={`Pickup ${prettyTime(today.pickupTime)}`} sub={data.fit.pickupLabel} />
                     <Line
                       icon={<GraduationCap size={18} aria-hidden />}
-                      title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
-                      sub={today.youNeed && today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
+                      title={`${shortCampus(data.campus)} at ${prettyTime(today.arriveAt ?? today.arriveBy)}`}
+                      sub={`${prettyDuration(data.fit.driveMinutes)} ride${today.youNeed ? ` · class at ${prettyTime(today.youNeed)}` : ""}`}
                     />
                     {today.homeLeave && (
                       <Line icon={<House size={18} aria-hidden />} title={`Ride home ${prettyTime(today.homeLeave)}`} sub="Optional · tap in on the days you need it" />

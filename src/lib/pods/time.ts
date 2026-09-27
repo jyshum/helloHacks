@@ -20,6 +20,18 @@ export function prettyTime(t: string | null | undefined): string {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")}${h < 12 ? "am" : "pm"}`;
 }
 
+// "35 min", "1 hr", "1 hr 5 min".
+export function prettyDuration(mins: number): string {
+  const m = Math.max(0, Math.round(mins));
+  if (m < 60) return `${m} min`;
+  return m % 60 ? `${Math.floor(m / 60)} hr ${m % 60} min` : `${m / 60} hr`;
+}
+
+// "08:25" + 27 → "08:52"
+export function addMinutes(t: string, mins: number): string {
+  return fromMinutes(toMinutes(t) + mins);
+}
+
 // Arrival time (minutes after midnight) for a given weekday, honouring per-day overrides.
 export function arriveOn(p: Pick<CommuteProfile, "arrive_by" | "day_times">, day: Weekday): number {
   return toMinutes(p.day_times?.[day] ?? p.arrive_by);

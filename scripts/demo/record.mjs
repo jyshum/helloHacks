@@ -300,7 +300,7 @@ async function approve(driver, rider) {
   await sleep(1500);
   await btn.click();
   mark("driver", "approved");
-  await rider.locator("h1").filter({ hasText: / by \d/ }).first().waitFor({ timeout: 45000 });
+  await rider.locator("h1").filter({ hasText: / (by|at) \d/ }).first().waitFor({ timeout: 45000 });
   mark("rider", "in_pod");
   await sleep(2500);
 }

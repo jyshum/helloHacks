@@ -16,13 +16,13 @@ const must = ({ data, error }, what) => {
   return data;
 };
 
-// Rider in Maya's demo pod (pod screen) and a Richmond commuter on Mei's route (preview + fare).
+// Rider in Maya's demo pod (pod screen) and a Steveston commuter on Mei's route (preview + fare).
 const RIDERS = [
   { key: "pod", email: "deck.rider1.hopped.demo@student.ubc.ca", name: "Sam Lee", faculty: "Applied Science", year: 2,
     home: { lat: 49.2539, lng: -123.1206 }, area: "Fairview", campus: { lat: 49.2677, lng: -123.247, label: "UBC Bus Exchange" }, days: [1, 2, 3, 4, 5], arrive: "07:45",
     joinDriver: "maya.chen@demo.hoppedin.test" },
   { key: "richmond", email: "deck.rider2.hopped.demo@student.ubc.ca", name: "Priya Shah", faculty: "Science", year: 3,
-    home: { lat: 49.1698, lng: -123.1815 }, area: "Richmond Centre", campus: { lat: 49.2567, lng: -123.2438, label: "Thunderbird Park" }, days: [1, 3], arrive: "09:00" },
+    home: { lat: 49.1339, lng: -123.1795 }, area: "Steveston", campus: { lat: 49.2567, lng: -123.2438, label: "Thunderbird Park" }, days: [1, 3], arrive: "09:00" },
 ];
 
 async function cleanup() {
@@ -54,7 +54,7 @@ async function setup() {
       const pod = must(await db.from("pods").select("id").eq("driver_id", d.id).eq("status", "active").single(), "pod");
       must(await db.from("pod_members").insert({
         pod_id: pod.id, user_id: u.id, role: "rider", status: "active", days: r.days,
-        pickup_lat: r.home.lat, pickup_lng: r.home.lng, pickup_label: `Near home · ${r.area}`, pickup_time: "07:20",
+        pickup_lat: r.home.lat, pickup_lng: r.home.lng, pickup_label: `Near home · ${r.area}`, pickup_time: "07:20", drive_minutes: 21, transit_minutes: 52, detour_minutes: 2,
       }), "member");
       creds[r.key] = { email: r.email, password, podId: pod.id };
     } else creds[r.key] = { email: r.email, password };
@@ -94,7 +94,7 @@ async function main() {
     const P = await phone(browser);
     await login(P.page, creds.pod);
     await P.page.goto(`${BASE}/pods/${creds.pod.podId}`);
-    await P.page.locator("h1").filter({ hasText: / by \d/ }).first().waitFor({ timeout: 30000 });
+    await P.page.locator("h1").filter({ hasText: / (by|at) \d/ }).first().waitFor({ timeout: 30000 });
     await sleep(5000); // map tiles + route
     await shot(P.page, "2-pod");
 

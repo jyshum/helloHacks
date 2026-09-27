@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 import { dayStates, fitFor } from "@/lib/pods/match";
-import { arriveOn, fromMinutes, leaveOn, pickupOn } from "@/lib/pods/time";
+import { arriveOn, fromMinutes, leaveOn, pickupOn, toMinutes } from "@/lib/pods/time";
 import { publicRouteStart } from "@/lib/pods/route";
 import { fareBetween } from "@/lib/pricing";
 import type { Weekday } from "@/lib/pods/types";
@@ -59,7 +59,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       note = gap < 0 ? `Gets there ${-gap} min too late for you` : `Gets there ${gap} min too early for you`;
     }
     const leave = drives ? leaveOn({ home_leave_at: dp.home_leave_at, home_day_times: dp.home_day_times ?? {} }, d) : null;
-    return { day: d, state: week[d - 1].state, ok, note, homeLeave: leave == null ? null : fromMinutes(leave), drives, pickupTime: mine, arriveBy, youNeed, riders: others.length, stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })) };
+    // Your arrival = your pickup + your time in the car (before the driver's "by" time).
+    const arriveAt = mine ? fromMinutes(toMinutes(mine) + fit.driveMinutes) : null;
+    return { day: d, arriveAt, state: week[d - 1].state, ok, note, homeLeave: leave == null ? null : fromMinutes(leave), drives, pickupTime: mine, arriveBy, youNeed, riders: others.length, stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })) };
   });
 
   const day = fit.days[0] as Weekday;

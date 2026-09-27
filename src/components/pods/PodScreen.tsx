@@ -17,7 +17,7 @@ import PodRouteLine from "@/components/pods/PodRouteLine";
 import RidersForYou from "@/components/pods/RidersForYou";
 import RideHome from "@/components/pods/RideHome";
 import MorningRide from "@/components/pods/MorningRide";
-import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
+import { addMinutes, arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyDuration, prettyTime, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { fareBetween, formatCents } from "@/lib/pricing";
 import type { Weekday } from "@/lib/pods/types";
@@ -203,7 +203,10 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
             )}
             <DayPicker days={myDays} value={day} onChange={setDay} />
             <h1 className="mt-4 text-[28px] font-bold leading-tight text-ubc">
-              {shortCampus(pod.campus_label)} by {prettyTime(arriveTime)}
+              {/* Riders see their own arrival (pickup + time in the car); the driver sees the pod's target. */}
+              {!isDriver && myTime && mine.drive_minutes
+                ? `${shortCampus(pod.campus_label)} at ${prettyTime(addMinutes(myTime, mine.drive_minutes))}`
+                : `${shortCampus(pod.campus_label)} by ${prettyTime(arriveTime)}`}
             </h1>
             <p className="mt-1 text-[15px] text-muted">
               {isDriver
@@ -373,10 +376,10 @@ function TimeSaved({ transit, drive }: { transit: number | null; drive: number |
   return (
     <div className="flex items-center justify-between rounded-2xl bg-green/10 px-4 py-3 text-green">
       <span className="flex items-center gap-2 font-semibold">
-        <Timer size={18} aria-hidden /> {transit - drive} min saved
+        <Timer size={18} aria-hidden /> {prettyDuration(transit - drive)} saved
       </span>
       <span className="text-sm">
-        {transit} → {drive} min
+        {prettyDuration(transit)} → {prettyDuration(drive)}
       </span>
     </div>
   );

@@ -9,7 +9,7 @@ import PodPreview from "@/components/pods/PodPreview";
 import { shortCampus } from "@/lib/places";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import Avatar from "@/components/Avatar";
-import { prettyTime } from "@/lib/pods/time";
+import { addMinutes, prettyDuration, prettyTime } from "@/lib/pods/time";
 import type { PodCard } from "@/app/api/pods/options/route";
 
 const DAY = ["", "M", "T", "W", "T", "F"];
@@ -142,10 +142,10 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                 </div>
                 {saved != null && saved >= 5 ? (
                   <span className="flex items-center gap-1 rounded-full bg-green/10 px-3 py-1.5 text-sm font-semibold text-green">
-                    <Timer size={14} aria-hidden /> {saved} min
+                    <Timer size={14} aria-hidden /> {prettyDuration(saved)}
                   </span>
                 ) : (
-                  <span className="text-sm font-semibold text-muted">{p.driveMinutes} min</span>
+                  <span className="text-sm font-semibold text-muted">{prettyDuration(p.driveMinutes)}</span>
                 )}
               </div>
 
@@ -176,7 +176,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                 </span>
                 <ArrowRight size={15} className="text-muted/60" aria-hidden />
                 <span className="whitespace-nowrap">
-                  <span className="font-semibold text-ink">{shortCampus(p.campus)}</span> <span className="text-muted">by {prettyTime(p.arriveBy)}</span>
+                  <span className="font-semibold text-ink">{shortCampus(p.campus)}</span> <span className="text-muted">{prettyTime(addMinutes(p.pickupTime, p.driveMinutes))}</span>
                 </span>
               </div>
 
