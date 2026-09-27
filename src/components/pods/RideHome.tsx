@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronRight, House, X } from "lucide-react";
+import { ChevronRight, House, X } from "lucide-react";
+import InOut from "@/components/pods/InOut";
 import BaseMap from "@/components/app/BaseMap";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
@@ -70,10 +71,7 @@ export default function RideHome({
   const me = riding.find((m) => m.user_id === mine.user_id);
   const others = Array.from(going).filter((id) => id !== mine.user_id).length;
 
-  const toggle = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    return call(`/api/pods/${pod.id}/home`, { date }, imIn ? "DELETE" : "POST");
-  };
+  const setIn = (next: boolean) => call(`/api/pods/${pod.id}/home`, { date }, next ? "POST" : "DELETE");
   const close = () => {
     setClosing(true);
     setTimeout(() => {
@@ -84,27 +82,20 @@ export default function RideHome({
 
   return (
     <>
-      <div role="button" tabIndex={0} onClick={() => setOpen(true)} onKeyDown={(e) => e.key === "Enter" && setOpen(true)} className="card mt-4 flex cursor-pointer items-center gap-3 p-4 transition active:scale-[0.99]">
+      <div role="button" tabIndex={0} onClick={() => setOpen(true)} onKeyDown={(e) => e.key === "Enter" && setOpen(true)} className="card mt-4 cursor-pointer p-4 transition active:scale-[0.99]">
+        <div className="flex items-center gap-3">
         <span className="row-icon"><House size={18} aria-hidden /></span>
         <span className="min-w-0 flex-1">
           <span className="block font-semibold text-ink">Ride home · {prettyTime(fromMinutes(leave))}</span>
           <span className="block truncate text-[13px] text-muted">
             {isDriver
               ? going.size ? `${going.size} riding home ${prettyDate(date)}` : `Leave ${shortCampus(pod.campus_label)} · no one yet`
-              : imIn ? `You're in · ${prettyDate(date)}` : canRide ? `Leave ${shortCampus(pod.campus_label)} · tap to see the route` : "Not one of your days"}
+              : `${prettyDate(date)} · ${imIn ? "you're in" : "tap to see the route"}`}
           </span>
         </span>
-        {canRide ? (
-          <button
-            onClick={toggle}
-            disabled={busy}
-            className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-semibold transition ${imIn ? "bg-green/10 text-green" : "bg-ubc text-white"}`}
-          >
-            {imIn ? <><Check size={15} aria-hidden /> In</> : "I'm in"}
-          </button>
-        ) : (
-          <ChevronRight size={18} className="text-muted" aria-hidden />
-        )}
+        <ChevronRight size={18} className="text-muted" aria-hidden />
+        </div>
+        {canRide && <InOut isIn={imIn} busy={busy} onChange={setIn} />}
       </div>
 
       {/* At the page root: the pod panel animates in, which would trap a fixed overlay. */}
@@ -161,8 +152,8 @@ export default function RideHome({
 
             {canRide && (
               <div className="shrink-0 border-t border-white/60 bg-white/60 px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-3">
-                <button onClick={() => toggle()} disabled={busy} className={`${imIn ? "btn-ghost" : "btn-ubc"} w-full py-4 text-lg`}>
-                  {imIn ? `Not ${DAY_NAME[day]}` : `I'm in for ${DAY_NAME[day]}`}
+                <button onClick={() => setIn(!imIn)} disabled={busy} className={`${imIn ? "btn-ghost" : "btn-ubc"} w-full py-4 text-lg`}>
+                  {imIn ? "Don't need a ride" : `I'm in for ${DAY_NAME[day]}`}
                 </button>
               </div>
             )}

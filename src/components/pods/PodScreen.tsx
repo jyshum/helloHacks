@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, CirclePause, Pencil, Play, Plus, Search, Timer, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, CirclePause, Pencil, Play, Plus, Search, Timer } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
@@ -16,7 +16,8 @@ import type { LatLng } from "@/lib/geo";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import RidersForYou from "@/components/pods/RidersForYou";
 import RideHome from "@/components/pods/RideHome";
-import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
+import MorningRide from "@/components/pods/MorningRide";
+import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { fareBetween, formatCents } from "@/lib/pricing";
 import type { Weekday } from "@/lib/pods/types";
@@ -214,8 +215,10 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
                   : `from ${driverProfile.home_area ?? "home"}`}
             </p>
 
-            {nextTrip && !(isDriver && riders.length === 0) && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
+            {/* The next trip's status and controls, when that's the day you're looking at. */}
+            {nextTrip && weekdayOf(nextTrip.date) === day && !(isDriver && riders.length === 0) && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
 
+            {!isDriver && <MorningRide view={view} day={day} busy={!!busy} call={call} />}
             <RideHome view={view} day={day} isDriver={isDriver} busy={!!busy} call={call} />
 
             {/* Members */}
@@ -571,15 +574,6 @@ function TripCard({
         )}
         {!isDriver && trip.status === "live" && myRequestId && (
           <Link href={`/match/${myRequestId}`} className="btn-ubc w-full py-4"><Navigation size={18} aria-hidden /> Track</Link>
-        )}
-        {!isDriver && !["live", "completed", "missed", "cancelled"].includes(trip.status) && (
-          <button
-            disabled={!!busy}
-            onClick={() => call(`/api/pods/${pod.id}/skip`, { date: trip.date }, skipping ? "DELETE" : "POST")}
-            className="btn-ghost w-full"
-          >
-            {skipping ? <><Check size={16} aria-hidden /> I&apos;m coming</> : <><X size={16} aria-hidden /> Skip {day}</>}
-          </button>
         )}
         {!isDriver && trip.status === "completed" && trip.rideId && (
           <Link href={`/trip/${trip.rideId}/complete`} className="btn-ghost w-full">Rate</Link>
