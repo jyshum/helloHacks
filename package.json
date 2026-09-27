@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "reseed": "node scripts/reseed.mjs"
+    "reseed": "node scripts/reseed.mjs",
+    "seed:pods": "node --env-file=.env.local scripts/seed-pods.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
