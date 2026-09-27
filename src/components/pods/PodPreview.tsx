@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { BadgeCheck, CalendarDays, GraduationCap, MapPin, Timer, X } from "lucide-react";
+import { BadgeCheck, GraduationCap, MapPin, Timer, X } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import Avatar from "@/components/Avatar";
 import { prettyTime } from "@/lib/pods/time";
@@ -35,6 +35,7 @@ type Preview = {
     detourMinutes: number;
   };
   route: LatLng[];
+  schedule: { day: number; pickupTime: string; arriveBy: string; youNeed: string }[];
   me: { faculty: string | null; year: number | null };
 };
 
@@ -56,6 +57,7 @@ export default function PodPreview({
 }) {
   const [data, setData] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [day, setDay] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`/api/pods/${podId}/preview`, { cache: "no-store" })
@@ -64,6 +66,7 @@ export default function PodPreview({
       .catch(() => setError("Couldn't load this pod."));
   }, [podId]);
 
+  const today = data ? data.schedule.find((x) => x.day === day) ?? data.schedule[0] : null;
   const saved = data && data.fit.transitMinutes != null ? data.fit.transitMinutes - data.fit.driveMinutes : null;
   const sameFaculty = data ? data.riders.filter((r) => r.faculty && r.faculty === data.me.faculty).length + (data.driver.faculty === data.me.faculty ? 1 : 0) : 0;
 
@@ -84,7 +87,7 @@ export default function PodPreview({
                   ...(data.campusPos ? [{ id: "campus", pos: data.campusPos, kind: "dropoff" as const }] : []),
                 ]}
                 routes={data.route.length ? [{ id: "r", path: data.route, color: "#0055B7", opacity: 0.85, weight: 5 }] : []}
-                fit={[data.fit.pickup, ...(data.campusPos ? [data.campusPos] : [])]}
+                fit={[...(data.route.length ? [data.route[0]] : []), data.fit.pickup, ...(data.campusPos ? [data.campusPos] : [])]}
                 bottomPadding={30}
               />
             </APIProvider>
@@ -127,15 +130,37 @@ export default function PodPreview({
                 </div>
               )}
 
-              {/* Your ride, in three lines */}
-              <div className="card mt-4 divide-y divide-ink/5 px-4">
-                <Line icon={<CalendarDays size={18} aria-hidden />} title={data.fit.days.map((d) => DAY[d]).join(", ")} />
-                <Line icon={<MapPin size={18} aria-hidden />} title={`Pickup ${prettyTime(data.fit.pickupTime)}`} sub={data.fit.pickupLabel} />
-                <Line
-                  icon={<GraduationCap size={18} aria-hidden />}
-                  title={`${shortCampus(data.campus)} by ${prettyTime(data.fit.arriveBy)}`}
-                  sub={data.fit.youNeed !== data.fit.arriveBy ? `You need ${prettyTime(data.fit.youNeed)}` : "Right on time"}
-                />
+              {/* Your ride: tap a day to see that day's times */}
+              <div className="card mt-4 px-4 pb-1 pt-4">
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4, 5].map((d) => {
+                    const mine = data.schedule.some((x) => x.day === d);
+                    const on = today?.day === d;
+                    return (
+                      <button
+                        key={d}
+                        disabled={!mine}
+                        onClick={() => setDay(d)}
+                        className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
+                          on ? "bg-ubc text-white shadow-glow" : mine ? "bg-ubc/10 text-ubc" : "bg-ink/[0.03] text-muted/40"
+                        }`}
+                        aria-pressed={on}
+                      >
+                        {DAY[d]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {today && (
+                  <div className="mt-2 divide-y divide-ink/5">
+                    <Line icon={<MapPin size={18} aria-hidden />} title={`Pickup ${prettyTime(today.pickupTime)}`} sub={data.fit.pickupLabel} />
+                    <Line
+                      icon={<GraduationCap size={18} aria-hidden />}
+                      title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
+                      sub={today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Who's in */}

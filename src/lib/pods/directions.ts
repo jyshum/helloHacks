@@ -36,3 +36,20 @@ export async function transitMinutes(from: LatLng, to: LatLng, arriveAt: Date): 
     return null;
   }
 }
+
+// Driving route that stops at `via` on the way (e.g. driver's commute + a rider pickup).
+export async function driveRouteVia(from: LatLng, via: LatLng, to: LatLng): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({
+      origin: `${from.lat},${from.lng}`,
+      destination: `${to.lat},${to.lng}`,
+      waypoints: `${via.lat},${via.lng}`,
+      mode: "driving",
+      key: key(),
+    });
+    const body = await fetch(`https://maps.googleapis.com/maps/api/directions/json?${params}`, { cache: "no-store" }).then((r) => r.json());
+    return body.status === "OK" ? body.routes[0].overview_polyline.points : null;
+  } catch {
+    return null;
+  }
+}

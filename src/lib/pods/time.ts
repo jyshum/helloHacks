@@ -85,3 +85,16 @@ export function dayWord(date: string): string {
   if (date === addDays(today, 1)) return "tomorrow";
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-CA", { weekday: "long", timeZone: "UTC" });
 }
+
+// A member's pickup on a given day. We store one pickup time (for their first day);
+// other days shift with the driver's arrival time for that day.
+export function pickupOn(
+  pickupTime: string | null | undefined,
+  driver: Pick<CommuteProfile, "arrive_by" | "day_times">,
+  memberDays: number[],
+  day: number
+): string | null {
+  if (!pickupTime || !memberDays.length) return pickupTime ?? null;
+  const offset = arriveOn(driver, memberDays[0] as Weekday) - toMinutes(pickupTime);
+  return fromMinutes(arriveOn(driver, day as Weekday) - offset);
+}

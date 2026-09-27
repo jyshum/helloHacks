@@ -166,6 +166,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                 <ArrowRight size={15} className="text-muted/60" aria-hidden />
                 <span className="font-semibold text-ink">{shortCampus(p.campus)}</span>
                 <span className="text-muted">by {prettyTime(p.arriveBy)}</span>
+                {p.varies && <span className="chip bg-ink/5 text-muted">varies</span>}
               </div>
 
               <div className="mt-4 flex items-center justify-between">

@@ -13,7 +13,7 @@ import Avatar from "@/components/Avatar";
 import SharedBadge from "@/components/SharedBadge";
 import EnableNotifications from "@/components/pods/EnableNotifications";
 import { decodePolyline, type LatLng } from "@/lib/geo";
-import { arriveOn, dayWord, fromMinutes, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
+import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import type { Weekday } from "@/lib/pods/types";
 
@@ -393,8 +393,11 @@ function TripCard({
   const skipping = trip.skippedUserIds.includes(mine.user_id);
   const weekday = new Date(`${trip.date}T12:00:00Z`).getUTCDay();
   const ridingThatDay = riders.filter((r) => (r.days as number[]).includes(weekday));
+  // Pickup times follow that day's arrival time.
+  const pickupFor = (m: MemberView) => pickupOn(m.pickup_time, view.driverProfile, m.days as number[], weekday);
+  const myPickupTime = pickupFor(mine);
   const coming = ridingThatDay.filter((r) => !trip.skippedUserIds.includes(r.user_id));
-  const firstPickup = coming.map((r) => r.pickup_time).filter(Boolean).sort()[0] ?? null;
+  const firstPickup = coming.map((r) => pickupOn(r.pickup_time, view.driverProfile, r.days as number[], new Date(`${trip.date}T12:00:00Z`).getUTCDay())).filter(Boolean).sort()[0] ?? null;
   const url = `/api/pods/${pod.id}/trip`;
 
   // Re-render every 30s so late/no-show banners appear on time.
@@ -404,7 +407,7 @@ function TripCard({
     return () => clearInterval(t);
   }, []);
 
-  const pickupMins = isToday && mine.pickup_time ? toMinutes(mine.pickup_time) - vancouverNow().minutes : null;
+  const pickupMins = isToday && myPickupTime ? toMinutes(myPickupTime) - vancouverNow().minutes : null;
   const waiting = !["live", "completed", "cancelled", "missed"].includes(trip.status);
   const late = !isDriver && !skipping && waiting && pickupMins != null && pickupMins <= 10 && pickupMins > -10;
   const noShow = !isDriver && !skipping && waiting && pickupMins != null && pickupMins <= -10;
@@ -430,8 +433,8 @@ function TripCard({
     <div className="card mt-5 p-5">
       <div className="flex items-baseline justify-between">
         <p className="text-[13px] font-medium text-muted">{when}</p>
-        {!isDriver && !skipping && mine.pickup_time && trip.status !== "cancelled" && (
-          <p className="text-[13px] font-semibold text-ink">{prettyTime(mine.pickup_time)}</p>
+        {!isDriver && !skipping && myPickupTime && trip.status !== "cancelled" && (
+          <p className="text-[13px] font-semibold text-ink">{prettyTime(myPickupTime)}</p>
         )}
       </div>
       <p className="mt-1 text-[22px] font-semibold tracking-tight text-ink">{skipping && !isDriver ? "You're skipping" : status}</p>
@@ -445,7 +448,7 @@ function TripCard({
               <div key={r.id} className={`flex items-center gap-3 text-sm ${skip ? "opacity-40" : ""}`}>
                 <Avatar name={r.user.full_name} photoUrl={r.user.photo_url} size={28} tone="rider" />
                 <span className={`flex-1 truncate ${skip ? "line-through" : "text-ink"}`}>{first(r.user.full_name)} · {r.pickup_label}</span>
-                <span className="font-semibold text-ink">{prettyTime(r.pickup_time)}</span>
+                <span className="font-semibold text-ink">{prettyTime(pickupFor(r))}</span>
               </div>
             );
           })}

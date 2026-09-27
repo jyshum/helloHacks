@@ -21,6 +21,7 @@ export type PodCard = {
   pickupLabel: string;
   pickupTime: string;
   arriveBy: string; // driver's arrival on your first shared day
+  varies: boolean; // arrival time differs across your days
   driveMinutes: number;
   transitMinutes: number | null;
 };
@@ -69,6 +70,7 @@ export async function GET() {
       pickupLabel: o.fit.pickupLabel,
       pickupTime: o.fit.pickupTime,
       arriveBy: p ? fromMinutes(arriveOn({ arrive_by: p.arrive_by, day_times: p.day_times ?? {} }, o.fit.days[0])) : "09:00",
+      varies: !!p && new Set(o.fit.days.map((d) => arriveOn({ arrive_by: p.arrive_by, day_times: p.day_times ?? {} }, d))).size > 1,
       driveMinutes: o.fit.driveMinutes,
       transitMinutes: o.fit.transitMinutes,
     };

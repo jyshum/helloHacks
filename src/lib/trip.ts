@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { haversineKm } from "@/lib/geo";
+import { pickupOn, weekdayOf } from "@/lib/pods/time";
 import type { Ride, RideRequest, User, Vehicle } from "@/lib/types";
 
 // One rider stop on a ride, in pickup order.
@@ -40,15 +41,22 @@ export async function loadTrip(requestId: string): Promise<TripBundle | null> {
       .select("id, rider_id, pickup_lat, pickup_lng, pickup_label, picked_up_at, status, rider:users!ride_requests_rider_id_fkey(full_name, photo_url)")
       .eq("ride_id", ride.id)
       .in("status", ["accepted", "completed"]),
-    admin.from("pod_trips").select("pod_id").eq("ride_id", ride.id).maybeSingle(),
+    admin.from("pod_trips").select("pod_id, trip_date").eq("ride_id", ride.id).maybeSingle(),
   ]);
   if (!driver || !rider) return null;
 
   // Pod rides have planned pickup times; order by those, else by distance from the start.
   const times = new Map<string, string>();
   if (podTrip?.pod_id) {
-    const { data: members } = await admin.from("pod_members").select("user_id, pickup_time").eq("pod_id", podTrip.pod_id);
-    (members ?? []).forEach((m) => m.pickup_time && times.set(m.user_id, String(m.pickup_time).slice(0, 5)));
+    const [{ data: members }, { data: dp }] = await Promise.all([
+      admin.from("pod_members").select("user_id, pickup_time, days").eq("pod_id", podTrip.pod_id),
+      admin.from("commute_profiles").select("arrive_by, day_times").eq("user_id", ride.driver_id).maybeSingle(),
+    ]);
+    const weekday = weekdayOf(podTrip.trip_date);
+    (members ?? []).forEach((m) => {
+      const t = dp ? pickupOn(m.pickup_time, { arrive_by: dp.arrive_by, day_times: dp.day_times ?? {} }, m.days as number[], weekday) : m.pickup_time;
+      if (t) times.set(m.user_id, String(t).slice(0, 5));
+    });
   }
   const origin = { lat: ride.origin_lat, lng: ride.origin_lng };
   const stops: Stop[] = (siblings ?? [])

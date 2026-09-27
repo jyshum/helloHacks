@@ -3,8 +3,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 import { fitFor } from "@/lib/pods/match";
-import { arriveOn, fromMinutes } from "@/lib/pods/time";
-import { closestPointOnPath, decodePolyline } from "@/lib/geo";
+import { arriveOn, fromMinutes, pickupOn } from "@/lib/pods/time";
+import { driveRouteVia } from "@/lib/pods/directions";
+import { decodePolyline, haversineKm } from "@/lib/geo";
 import type { Weekday } from "@/lib/pods/types";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +33,28 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     admin.from("pods").select("campus_label, campus_lat, campus_lng").eq("id", params.id).single(),
   ]);
 
-  // Route shown only from your pickup onwards, so the driver's home isn't revealed.
+  // The driver's normal drive with a stop at your pickup. The first ~400 m are cut
+  // so the driver's exact address isn't shown.
   let route: { lat: number; lng: number }[] = [];
-  if (dp.route_polyline) {
-    const path = decodePolyline(dp.route_polyline);
-    const from = closestPointOnPath(fit.pickup, path);
-    route = [fit.pickup, ...path.slice(from.index + 1)];
+  const campusPos = pod ? { lat: pod.campus_lat, lng: pod.campus_lng } : { lat: dp.campus_lat, lng: dp.campus_lng };
+  const encoded = await driveRouteVia({ lat: dp.home_lat, lng: dp.home_lng }, fit.pickup, campusPos);
+  if (encoded) {
+    const path = decodePolyline(encoded);
+    let km = 0, start = 0;
+    for (let i = 1; i < path.length && km < 0.4; i++) {
+      km += haversineKm(path[i - 1], path[i]);
+      start = i;
+    }
+    route = path.slice(start);
   }
+
+  // Each of your days, with that day's times (drivers can arrive at different times per day).
+  const schedule = fit.days.map((d) => ({
+    day: d,
+    pickupTime: pickupOn(fit.pickupTime, dp, fit.days, d) ?? fit.pickupTime,
+    arriveBy: fromMinutes(arriveOn(dp, d as Weekday)),
+    youNeed: fromMinutes(arriveOn(rp, d as Weekday)),
+  }));
 
   const day = fit.days[0] as Weekday;
   return NextResponse.json({
@@ -64,6 +80,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       transitMinutes: fit.transitMinutes,
       detourMinutes: fit.detourMinutes,
     },
+    schedule,
     route,
     me: { faculty: me.faculty, year: me.year },
   });
