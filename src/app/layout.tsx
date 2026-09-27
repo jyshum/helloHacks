@@ -10,6 +10,10 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "UBC Carpool",
   description: "Share rides to campus. Split the gas.",
+  // PWA install + web push (iOS only allows push for apps added to the Home Screen).
+  manifest: "/manifest.webmanifest",
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "hoppedIn", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

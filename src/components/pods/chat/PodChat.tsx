@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ArrowDown, Ellipsis, Flag, MessageCircle, RotateCw, SendHorizontal, X } from "lucide-react";
 import BackButton from "@/components/app/BackButton";
 import Avatar from "@/components/Avatar";
+import EnableNotifications from "@/components/pods/EnableNotifications";
 import { createClient } from "@/lib/supabase/client";
 import type { PodMessage } from "@/lib/pods/types";
 import { MAX_MESSAGE_LENGTH, type ChatMember, type ChatMessage, type ChatPerson, type ChatState } from "./types";
@@ -204,6 +205,7 @@ export default function PodChat({ podId, me }: { podId: string; me: ChatPerson }
           ))}
         </div>
       </header>
+      <EnableNotifications variant="banner" />
 
       <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto px-4 py-4">
         {loadError ? (
