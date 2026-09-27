@@ -23,7 +23,13 @@ export function useMyLocation(): LatLng | null {
   return pos;
 }
 
-// Shares my position on a Supabase presence channel and returns everyone else on it.
+// Live positions of everyone on a channel (drivers on the map, everyone on a ride).
+// Positions go over Supabase broadcast, not presence: presence only allows a handful of
+// updates per 30 s per client, which froze moving cars. Each client sends its position at
+// most once a second, plus a heartbeat every `intervalMs`; anyone silent for STALE_MS drops off.
+const MIN_PUSH_MS = 1000;
+const STALE_MS = 15000;
+
 export function usePresence(
   channelName: string,
   me: { id: string; role: Role; full_name: string; photo_url?: string | null },
@@ -37,42 +43,62 @@ export function usePresence(
   posRef.current = myPos;
   const shareRef = useRef(share);
   shareRef.current = share;
+  const lastPush = useRef(0);
+  const meRef = useRef(me);
+  meRef.current = me;
+
+  const push = () => {
+    const ch = channelRef.current;
+    const p = posRef.current;
+    if (!ch || !p || !shareRef.current) return;
+    lastPush.current = Date.now();
+    const m = meRef.current;
+    void ch.send({ type: "broadcast", event: "pos", payload: { user_id: m.id, role: m.role, name: m.full_name, photo: m.photo_url ?? null, lat: p.lat, lng: p.lng } });
+  };
 
   useEffect(() => {
     if (DEMO_MODE) return;
     const supabase = createClient();
-    const channel = supabase.channel(channelName, { config: { presence: { key: me.id } } });
+    const seen = new Map<string, { u: PresenceUser; at: number }>();
+    const publish = () => setOthers(Array.from(seen.values()).map((x) => x.u));
+    const channel = supabase.channel(channelName, { config: { broadcast: { self: false } } });
     channel
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState<PresenceUser>();
-        setOthers(
-          Object.values(state)
-            .map((entries) => entries[entries.length - 1])
-            .filter((u) => !!u && u.user_id !== me.id) as PresenceUser[]
-        );
+      .on("broadcast", { event: "pos" }, ({ payload }) => {
+        const u = payload as PresenceUser;
+        if (!u?.user_id || u.user_id === me.id) return;
+        seen.set(u.user_id, { u, at: Date.now() });
+        publish();
       })
-      .subscribe();
+      .on("broadcast", { event: "leave" }, ({ payload }) => {
+        if (seen.delete((payload as { user_id: string }).user_id)) publish();
+      })
+      .subscribe((status) => status === "SUBSCRIBED" && push());
     channelRef.current = channel;
 
-    const track = () => {
-      const p = posRef.current;
-      if (p && shareRef.current) channel.track({ user_id: me.id, role: me.role, name: me.full_name, photo: me.photo_url ?? null, lat: p.lat, lng: p.lng });
-    };
-    const t = setInterval(track, intervalMs);
+    const beat = setInterval(push, intervalMs);
+    const prune = setInterval(() => {
+      let changed = false;
+      for (const [id, x] of Array.from(seen)) if (Date.now() - x.at > STALE_MS) changed = seen.delete(id) || changed;
+      if (changed) publish();
+    }, 5000);
     return () => {
-      clearInterval(t);
+      clearInterval(beat);
+      clearInterval(prune);
+      void channel.send({ type: "broadcast", event: "leave", payload: { user_id: me.id } });
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [channelName, me.id, me.role, me.full_name, me.photo_url, intervalMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelName, me.id, intervalMs]);
 
-  // Push immediately when location arrives; stop sharing the moment share turns off.
+  // Send right away when I move (throttled); say goodbye the moment sharing turns off.
   useEffect(() => {
     const ch = channelRef.current;
     if (!ch) return;
-    if (!share) ch.untrack();
-    else if (myPos) ch.track({ user_id: me.id, role: me.role, name: me.full_name, photo: me.photo_url ?? null, lat: myPos.lat, lng: myPos.lng });
-  }, [share, myPos, me.id, me.role, me.full_name, me.photo_url]);
+    if (!share) void ch.send({ type: "broadcast", event: "leave", payload: { user_id: me.id } });
+    else if (myPos && Date.now() - lastPush.current >= MIN_PUSH_MS) push();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [share, myPos?.lat, myPos?.lng]);
 
   return others;
 }
