@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "reseed": "node scripts/reseed.mjs",
     "seed:pods": "node --env-file=.env.local scripts/seed-pods.mjs",
-    "seed:wallets": "node --env-file=.env.local scripts/seed-wallets.mjs"
+    "seed:wallets": "node --env-file=.env.local scripts/seed-wallets.mjs",
+    "seed:demo-pods": "node --env-file=.env.local scripts/seed-edge-pods.mjs",
+    "demo:record": "node --env-file=.env.local scripts/demo/record.mjs",
+    "demo:edit": "node scripts/demo/edit.mjs",
+    "demo:screens": "node --env-file=.env.local scripts/demo/screens.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

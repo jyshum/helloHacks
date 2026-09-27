@@ -25,47 +25,43 @@ const C = (key, dt = 0) => cue(key) + dt;
 // ---- The cut -------------------------------------------------------------------------------
 // layout: "driver" | "rider" (one phone, centred) | "split" (both). active: which phone is lit.
 // Times are wall-clock seconds of the recording (both phones share one clock).
-// One phone at a time, near real speed. Only typing and driving are sped up.
-// Cut on purpose: the signup form, the rider's onboarding (same screens), the wallet top-up
-// (the end receipt shows the auto-payment), and dead time between screens.
+// One phone at a time at real speed (the recording itself is paced like a person, with tap
+// highlights). Only typing and driving are sped up. Cut on purpose: the signup form, the rider's
+// onboarding (same screens), the wallet top-up (the end receipt shows the auto-payment).
 const plan = [
-  { card: "title", dur: 2 },
+  { card: "title", dur: 2.2 },
 
   // DRIVER: landing → tap Get started → (signup cut) → onboarding.
-  { layout: "driver", from: C("driver:landing", -0.1), to: C("driver:signup", 0.2), speed: 1 },
-  { layout: "driver", from: C("driver:verified", 0.3), to: C("driver:car", 0.2), speed: 1,
-    zoom: { who: "driver", from: C("driver:ride_home_step", -0.2), to: C("driver:car", -0.3), scale: 1.12, origin: [50, 35] } },
-  { layout: "driver", from: C("driver:car", 0.2), to: C("driver:pod_ready", 1.2), speed: 1.7 },
+  { layout: "driver", from: C("driver:landing", -0.2), to: C("driver:signup", 0.3), speed: 1 },
+  { layout: "driver", from: C("driver:verified", 0.4), to: C("driver:car", 0.3), speed: 1 },
+  { layout: "driver", from: C("driver:car", 0.3), to: C("driver:pod_ready", 1.6), speed: 1.6 },
 
   // RIDER: (onboarding cut) finds the driver's pod, previews it, joins.
-  { layout: "rider", from: C("rider:pods_for_you", -0.3), to: C("rider:pending", 0.9), speed: 1,
-    zoom: { who: "rider", from: C("rider:fare_breakdown", -0.4), to: C("rider:pending", -0.6), scale: 1.25, origin: [50, 80] } },
+  { layout: "rider", from: C("rider:pods_for_you", -0.4), to: C("rider:pending", 1.0), speed: 1,
+    zoom: { who: "rider", from: C("rider:fare_breakdown", -0.6), to: C("rider:pending", -0.9), scale: 1.18, origin: [50, 80] } },
 
   // DRIVER: the request lands live; approve.
-  { layout: "driver", from: C("driver:request_arrives", -0.8), to: C("driver:approved", 1.0), speed: 1,
-    zoom: { who: "driver", from: C("driver:request_arrives", -0.5), to: C("driver:approved", 1.0), scale: 1.25, origin: [50, 72] } },
+  { layout: "driver", from: C("driver:request_arrives", -1.0), to: C("driver:approved", 1.2), speed: 1,
+    zoom: { who: "driver", from: C("driver:request_arrives", -0.6), to: C("driver:approved", 1.2), scale: 1.18, origin: [50, 72] } },
   // RIDER: in the pod; taps in for the ride home.
-  { layout: "rider", from: C("rider:in_pod", -0.5), to: C("rider:in_pod", 1.5), speed: 1 },
-  { layout: "rider", from: C("rider:ride_home_sheet", -1.0), to: C("rider:ride_home_in", 0.7), speed: 1,
-    zoom: { who: "rider", from: C("rider:ride_home_sheet", -0.3), to: C("rider:ride_home_in", 0.6), scale: 1.15, origin: [50, 48] } },
+  { layout: "rider", from: C("rider:in_pod", -0.5), to: C("rider:in_pod", 2.0), speed: 1 },
+  { layout: "rider", from: C("rider:ride_home_sheet", -2.2), to: C("rider:ride_home_in", 0.9), speed: 1 },
 
   // TRIP DAY.
-  { layout: "driver", from: C("driver:start_pickup", -1.0), to: C("driver:driving", 0.5), speed: 1,
-    zoom: { who: "driver", from: C("driver:start_pickup", -1.0), to: C("driver:start_pickup", 0.5), scale: 1.15, origin: [50, 55] } },
-  { layout: "rider", from: C("rider:tracking", 0.6), to: C("rider:driver_here", -0.3), speed: 3 },
-  { layout: "rider", from: C("rider:driver_here", -0.3), to: C("rider:driver_here", 2.0), speed: 1,
-    zoom: { who: "rider", from: C("rider:driver_here", -0.3), to: C("rider:driver_here", 2.0), scale: 1.18, origin: [50, 62] } },
-  { layout: "driver", from: C("driver:picked_up", -1.8), to: C("driver:picked_up", 0.6), speed: 1,
-    zoom: { who: "driver", from: C("driver:picked_up", -1.8), to: C("driver:picked_up", 0.6), scale: 1.18, origin: [50, 80] } },
-  { layout: "driver", from: C("driver:picked_up", 0.6), to: C("driver:arrived", -0.3), speed: 6 },
-  { layout: "driver", from: C("driver:arrived", -0.3), to: C("driver:arrived", 2.6), speed: 1 },
-  { layout: "rider", from: C("rider:receipt", -0.6), to: C("rider:receipt", 2.8), speed: 1 },
-  { card: "end", dur: 2.4 },
+  { layout: "driver", from: C("driver:start_pickup", -2.0), to: C("driver:driving", 0.6), speed: 1 },
+  { layout: "rider", from: C("rider:tracking", 0.6), to: C("rider:driver_here", -0.4), speed: 3 },
+  { layout: "rider", from: C("rider:driver_here", -0.4), to: C("rider:driver_here", 2.4), speed: 1,
+    zoom: { who: "rider", from: C("rider:driver_here", -0.4), to: C("rider:driver_here", 2.4), scale: 1.15, origin: [50, 62] } },
+  { layout: "driver", from: C("driver:picked_up", -2.2), to: C("driver:picked_up", 0.8), speed: 1 },
+  { layout: "driver", from: C("driver:picked_up", 0.8), to: C("driver:arrived", -0.3), speed: 6 },
+  { layout: "driver", from: C("driver:arrived", -0.3), to: C("driver:arrived", 3.0), speed: 1 },
+  { layout: "rider", from: C("rider:receipt", -0.6), to: C("rider:receipt", 3.2), speed: 1 },
+  { card: "end", dur: 2.6 },
 ];
 
 // ---- Timeline maths --------------------------------------------------------------------------
 // Hard cap: if the cut runs long, speed every clip up evenly so the whole video fits.
-const MAX_SECONDS = 69.5;
+const MAX_SECONDS = 92;
 {
   const cards = plan.filter((p) => p.card).reduce((t, p) => t + p.dur, 0);
   const clips = plan.filter((p) => !p.card).reduce((t, p) => t + (p.to - p.from) / p.speed, 0);
@@ -139,7 +135,7 @@ function stateAt(t) {
   if (s.zoom) {
     const z = s.zoom;
     const zt = st.times[z.who];
-    const k = ease((zt - z.from) / 0.5) * (1 - ease((zt - (z.to - 0.5)) / 0.5));
+    const k = ease((zt - z.from) / 0.9) * (1 - ease((zt - (z.to - 0.9)) / 0.9));
     st.zoom[z.who] = [lerp(1, z.scale, k), z.origin[0], z.origin[1]];
   }
   return st;

@@ -35,16 +35,44 @@ function mark(who, name) {
 }
 
 // ---- Helpers ---------------------------------------------------------------------------
-async function tap(page, locator, pause = 350) {
-  const el = typeof locator === "string" ? page.locator(locator) : locator;
-  await el.first().waitFor({ state: "visible", timeout: 30000 });
-  await el.first().scrollIntoViewIfNeeded();
-  await sleep(pause);
-  await el.first().click();
+// Human pacing: look at the screen first, show where the finger lands, tap, let it settle.
+const LOOK_MS = 900;
+const SETTLE_MS = 800;
+
+// A soft blue ring where the tap lands, so viewers can follow what's pressed.
+async function ripple(page, el) {
+  const box = await el.boundingBox().catch(() => null);
+  if (!box) return;
+  await page.evaluate(({ x, y }) => {
+    const d = document.createElement("div");
+    d.style.cssText = `position:fixed;left:${x - 26}px;top:${y - 26}px;width:52px;height:52px;border-radius:50%;background:rgba(0,85,183,.22);border:3px solid rgba(0,85,183,.6);pointer-events:none;z-index:2147483647;transform:scale(.55);opacity:1;transition:transform .5s ease-out,opacity .5s ease-out`;
+    document.documentElement.appendChild(d);
+    requestAnimationFrame(() => requestAnimationFrame(() => { d.style.transform = "scale(1.35)"; d.style.opacity = "0"; }));
+    setTimeout(() => d.remove(), 650);
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  await sleep(320);
+}
+
+async function tap(page, locator, look = LOOK_MS) {
+  const el = (typeof locator === "string" ? page.locator(locator) : locator).first();
+  await el.waitFor({ state: "visible", timeout: 30000 });
+  await el.scrollIntoViewIfNeeded();
+  await sleep(look);
+  await ripple(page, el);
+  await el.click();
+  await sleep(SETTLE_MS);
 }
 async function type(page, selector, text) {
-  await tap(page, selector, 200);
-  await page.locator(selector).first().pressSequentially(text, { delay: 55 });
+  await tap(page, selector, 500);
+  await page.locator(selector).first().pressSequentially(text, { delay: 75 });
+  await sleep(400);
+}
+async function choose(page, selector, value) {
+  const el = page.locator(selector).first();
+  await sleep(600);
+  await ripple(page, el);
+  await page.selectOption(selector, value);
+  await sleep(700);
 }
 const byText = (page, text) => page.getByText(text, { exact: true });
 
@@ -197,10 +225,8 @@ async function signUp(page, who) {
   // Faculty + year: shown on your profile and pod cards, and same-faculty riders are highlighted.
   mark(who, "faculty_year");
   await sleep(400);
-  await page.selectOption("#faculty", p.faculty);
-  await sleep(700);
-  await page.selectOption("#year", p.year);
-  await sleep(700);
+  await choose(page, "#faculty", p.faculty);
+  await choose(page, "#year", p.year);
   const resp = page.waitForResponse((r) => r.url().includes("/api/signup"));
   await tap(page, page.getByRole("button", { name: "Continue" }));
   const { emailLink } = await (await resp).json();
@@ -219,20 +245,18 @@ async function pickHome(page, place) {
   await type(page, 'input[placeholder="Address or postal code"]', place);
   const first = page.locator("button.row").first();
   await first.waitFor({ timeout: 15000 });
-  await sleep(500);
-  await first.click();
+  await tap(page, first, 900);
   await page.getByText("Shown as").waitFor();
-  await sleep(700);
+  await sleep(1000);
 }
 
 async function schedule(page, time) {
   for (const d of ["Mon", "Tue", "Wed", "Thu", "Fri"]) {
-    await tap(page, page.getByRole("button", { name: `${d} off` }), 180);
+    await tap(page, page.getByRole("button", { name: `${d} off` }), 250);
   }
-  await page.selectOption('select[aria-label="Arrive by on Mon"]', time);
-  await sleep(400);
+  await choose(page, 'select[aria-label="Arrive by on Mon"]', time);
   await tap(page, byText(page, "Same time every day"));
-  await sleep(700);
+  await sleep(600);
 }
 
 async function onboardDriver(page) {
@@ -294,12 +318,30 @@ async function onboardRider(page) {
   mark("rider", "asked");
 }
 
+// If a phone got bounced to signup/login (dropped session), sign back in and return. Off camera.
+async function stayIn(page, who, backTo) {
+  if (!/\/(signup|login)/.test(page.url()) && !(await page.getByText("Sign in first").count())) return;
+  console.log(`  (${who} session dropped; signing back in)`);
+  await page.goto(BASE + "/login");
+  await page.fill('input[type="email"]', PEOPLE[who].email);
+  await page.fill('input[type="password"]', "demo-ride-2026");
+  await page.click('button[type="submit"]');
+  await page.waitForURL("**/pods**", { timeout: 30000 });
+  if (backTo) await page.goto(backTo);
+}
+
 async function approve(driver, rider) {
+  const podUrl = driver.url();
+  for (let i = 0; i < 30 && !(await driver.getByRole("button", { name: "Approve" }).count()); i++) {
+    await stayIn(driver, "driver", podUrl.includes("/pods/") ? podUrl : null);
+    await sleep(1500);
+  }
   const btn = driver.getByRole("button", { name: "Approve" });
   await btn.waitFor({ timeout: 45000 });
   mark("driver", "request_arrives");
   await btn.scrollIntoViewIfNeeded();
-  await sleep(1500);
+  await sleep(1800);
+  await ripple(driver, btn);
   await btn.click();
   mark("driver", "approved");
   await rider.locator("h1").filter({ hasText: / (by|at) \d/ }).first().waitFor({ timeout: 45000 });
@@ -311,7 +353,8 @@ async function approve(driver, rider) {
 async function rideHome(rider) {
   const card = rider.locator(".card").filter({ hasText: /^Ride home/ }).first();
   await card.scrollIntoViewIfNeeded();
-  await sleep(700);
+  await sleep(1000);
+  await ripple(rider, card.locator("span").first());
   await card.locator("span").first().click();
   await rider.getByText(/^Home by /).waitFor({ timeout: 20000 });
   mark("rider", "ride_home_sheet");
@@ -344,7 +387,9 @@ async function topUp(rider) {
 }
 
 async function trip(driverCtx, driver, rider, driverId, riderId, podId) {
-  await driver.reload();
+  await driver.goto(`${BASE}/pods/${podId}`);
+  await stayIn(driver, "driver", `${BASE}/pods/${podId}`);
+  await stayIn(rider, "rider", `${BASE}/pods/${podId}`);
   await tap(driver, driver.getByRole("button", { name: "Start pickup" }));
   mark("driver", "start_pickup");
   await tap(driver, driver.getByRole("link", { name: "Open trip" }));
