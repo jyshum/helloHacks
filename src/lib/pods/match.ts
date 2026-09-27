@@ -191,15 +191,19 @@ async function excludedPods(riderId: string, opts: { includeLeft?: boolean } = {
   return new Set((data ?? []).map((m) => m.pod_id));
 }
 
-async function invite(podId: string, d: Profile, r: Profile, fit: Fit) {
-  await createAdminClient()
+// Real riders get an invite to accept. Demo riders (no login, can't tap Join) join straight away.
+async function invite(podId: string, d: Profile, r: Profile, fit: Fit): Promise<"invited" | "active"> {
+  const admin = createAdminClient();
+  const { data: u } = await admin.from("users").select("auth_id, full_name").eq("id", r.user_id).single();
+  const status = u?.auth_id ? "invited" : "active";
+  await admin
     .from("pod_members")
     .upsert(
       {
         pod_id: podId,
         user_id: r.user_id,
         role: "rider",
-        status: "invited",
+        status,
         days: fit.days,
         pickup_lat: fit.pickup.lat,
         pickup_lng: fit.pickup.lng,
@@ -213,6 +217,10 @@ async function invite(podId: string, d: Profile, r: Profile, fit: Fit) {
       },
       { onConflict: "pod_id,user_id" }
     );
+  if (status === "active") {
+    await postSystemMessage(podId, `${u?.full_name ?? "A rider"} joined the pod.`);
+    return status;
+  }
   const saved = fit.transitMinutes != null ? fit.transitMinutes - fit.driveMinutes : null;
   await notify([r.user_id], {
     kind: "pod_invite",
@@ -220,6 +228,7 @@ async function invite(podId: string, d: Profile, r: Profile, fit: Fit) {
     body: saved && saved > 5 ? `Ride to campus and save ~${saved} min vs transit.` : "A verified UBC driver is heading your way.",
     url: "/pods",
   });
+  return status;
 }
 
 // --- Entry points ---------------------------------------------------------------
@@ -407,6 +416,69 @@ export async function requestToJoin(riderId: string, podId: string): Promise<{ s
     { onConflict: "pod_id,user_id" }
   );
   return { status };
+}
+
+// --- Driver side: riders for you --------------------------------------------------
+
+export type RiderOption = { rider: Profile; fit: Fit; covered: number[] };
+
+// Who's already spoken for: riders in this pod, riders who left or passed on it,
+// and the days each rider already has covered by another pod.
+async function riderBook(podId: string) {
+  const { data } = await createAdminClient()
+    .from("pod_members")
+    .select("user_id, pod_id, days, status")
+    .eq("role", "rider")
+    .in("status", ["invited", "requested", "active", "declined", "left"]);
+  const here = new Set<string>();
+  const covered = new Map<string, number[]>();
+  for (const m of data ?? []) {
+    if (m.pod_id === podId) here.add(m.user_id);
+    else if (m.status === "active" || m.status === "requested") covered.set(m.user_id, [...(covered.get(m.user_id) ?? []), ...(m.days as number[])]);
+  }
+  return { here, covered };
+}
+
+// Riders whose commute fits this driver, best first. Only their open days count.
+export async function riderOptions(driverId: string, limit = 6): Promise<RiderOption[]> {
+  const [d] = await loadProfiles({ userIds: [driverId], mode: "driver" });
+  if (!d) return [];
+  const podId = await ensureDriverPod(d);
+  const route = await ensureRoute(d);
+  const { here, covered } = await riderBook(podId);
+  const open = (await loadProfiles({ mode: "rider" }))
+    .filter((r) => !here.has(r.user_id))
+    .map((r) => ({ full: r, r: { ...r, days: r.days.filter((day) => !covered.get(r.user_id)?.includes(day)) } }))
+    .filter((x) => x.r.days.length);
+  const promising = open
+    .map((x) => ({ ...x, q: quickFit(d, x.r, route.path) }))
+    .filter((x) => x.q)
+    .sort((a, b) => b.q!.days.length - a.q!.days.length || a.q!.near.km - b.q!.near.km)
+    .slice(0, limit * 2);
+  const users = await loadUsers([d.user_id, ...promising.map((x) => x.r.user_id)]);
+  const fits = await Promise.all(
+    promising.map(async (x) => {
+      const fit = await fullFit(d, x.r, users.get(d.user_id)!, users.get(x.r.user_id)!);
+      return fit ? { rider: x.full, fit, covered: covered.get(x.r.user_id) ?? [] } : null;
+    })
+  );
+  return fits.filter((x): x is RiderOption => !!x).sort((a, b) => b.fit.score - a.fit.score).slice(0, limit);
+}
+
+// Driver taps Add on a rider from "Riders for you".
+export async function addRider(driverId: string, riderId: string): Promise<{ status: "invited" | "active" } | { error: string }> {
+  const [d] = await loadProfiles({ userIds: [driverId], mode: "driver" });
+  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
+  if (!d || !r) return { error: "That rider isn't available any more." };
+  const podId = await ensureDriverPod(d);
+  if ((await seatsLeft(podId, d.seats, riderId)) <= 0) return { error: "Your car is full." };
+  const { covered } = await riderBook(podId);
+  const openR = { ...r, days: r.days.filter((day) => !covered.get(riderId)?.includes(day)) };
+  const users = await loadUsers([driverId, riderId]);
+  const fit = openR.days.length ? await fullFit(d, openR, users.get(driverId)!, users.get(riderId)!) : null;
+  if (!fit) return { error: "That rider doesn't fit your route any more." };
+
+  return { status: await invite(podId, d, r, fit) };
 }
 
 // Run after someone saves their commute. Keeps pods consistent with the new answers.

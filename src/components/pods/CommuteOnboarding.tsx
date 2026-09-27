@@ -1,15 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Car, Check, LocateFixed, MapPin, Minus, Plus, Search, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, Camera, Car, Check, LocateFixed, MapPin, Minus, Plus, Search, User } from "lucide-react";
 import { nearestArea } from "@/lib/areas";
 import { CAMPUS_SPOTS } from "@/lib/places";
 import { WEEKDAY_LABELS, type CommuteMode, type CommuteProfile, type Weekday } from "@/lib/pods/types";
 
 type Home = { lat: number; lng: number; label: string };
-type Step = "mode" | "home" | "schedule" | "seats" | "saving";
+type Step = "mode" | "home" | "schedule" | "seats" | "car" | "saving";
+type CarLite = { make_model: string; color: string; license_plate: string; photo_url: string | null };
 
 const DAYS: Weekday[] = [1, 2, 3, 4, 5];
 // 7:00am – 1:00pm in 15 min steps.
@@ -25,11 +25,11 @@ const pretty = (t: string) => {
 export default function CommuteOnboarding({
   firstName,
   existing,
-  licenseVerified,
+  car,
 }: {
   firstName: string;
   existing: CommuteProfile | null;
-  licenseVerified: boolean;
+  car: CarLite | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("mode");
@@ -47,7 +47,7 @@ export default function CommuteOnboarding({
   const [seats, setSeats] = useState(existing?.seats ?? 3);
   const [error, setError] = useState<string | null>(null);
 
-  const steps: Step[] = mode === "driver" ? ["mode", "home", "schedule", "seats"] : ["mode", "home", "schedule"];
+  const steps: Step[] = mode === "driver" ? ["mode", "home", "schedule", "seats", "car"] : ["mode", "home", "schedule"];
   const index = Math.max(0, steps.indexOf(step));
 
   async function save() {
@@ -69,11 +69,27 @@ export default function CommuteOnboarding({
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(body.error ?? "Couldn't save. Try again.");
-      setStep(mode === "driver" ? "seats" : "schedule");
+      setStep(mode === "driver" ? "car" : "schedule");
       return;
     }
     router.push(body.podId ? `/pods/${body.podId}` : "/pods");
     router.refresh();
+  }
+
+  // Drivers: save the car first (riders use it to spot you), then the commute.
+  async function saveCar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    f.set("seat_capacity", String(seats));
+    setStep("saving");
+    setError(null);
+    const res = await fetch("/api/vehicles", { method: "POST", body: f });
+    if (!res.ok) {
+      setError((await res.json().catch(() => ({}))).error ?? "Couldn't save your car.");
+      setStep("car");
+      return;
+    }
+    await save();
   }
 
   function back() {
@@ -88,7 +104,7 @@ export default function CommuteOnboarding({
           <span className="absolute h-full w-full animate-ping rounded-full bg-sky/30" />
           <Car size={32} className="relative text-ubc" aria-hidden />
         </span>
-        <h1 className="mt-6 font-heading text-2xl font-bold text-ubc">Finding your pod…</h1>
+        <h1 className="mt-6 font-heading text-2xl font-bold text-ubc">{mode === "driver" ? "Finding riders…" : "Finding your pod…"}</h1>
       </main>
     );
   }
@@ -228,21 +244,61 @@ export default function CommuteOnboarding({
             </button>
           </div>
 
-          <Link href="/driver-verify" className="card mt-10 flex items-center gap-3 p-4">
-            <ShieldCheck size={24} className={licenseVerified ? "text-green" : "text-blue"} aria-hidden />
-            <span className="flex-1 text-sm">
-              <span className="block font-semibold text-ink">{licenseVerified ? "Verified" : "Get verified"}</span>
-              
-            </span>
-          </Link>
+          <div className="mt-auto pt-6">
+            <button onClick={() => setStep("car")} className="btn-ubc w-full py-4">Continue</button>
+          </div>
+        </section>
+      )}
 
+      {step === "car" && (
+        <section className="mt-8 flex flex-1 flex-col">
+          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">Your car</h1>
+          <p className="mt-2 text-muted">Riders use this to spot you.</p>
+          <form id="car" onSubmit={saveCar} className="mt-6 flex flex-col gap-3">
+            <input name="make_model" required defaultValue={car?.make_model} className="input" placeholder="Make & model" aria-label="Make and model" />
+            <div className="grid grid-cols-2 gap-3">
+              <input name="color" required defaultValue={car?.color} className="input" placeholder="Colour" aria-label="Colour" />
+              <input name="license_plate" required defaultValue={car?.license_plate} className="input uppercase" placeholder="Plate" aria-label="Licence plate" />
+            </div>
+            <CarPhoto existing={car?.photo_url ?? null} />
+          </form>
           {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
           <div className="mt-auto pt-6">
-            <button onClick={save} className="btn-ubc w-full py-4">Find riders</button>
+            <button type="submit" form="car" className="btn-ubc w-full py-4">Find riders</button>
+            <button onClick={save} className="mt-3 w-full py-2 text-sm font-semibold text-muted">Skip for now</button>
           </div>
         </section>
       )}
     </main>
+  );
+}
+
+// Car photo with the plate visible. Tap to take or pick one.
+function CarPhoto({ existing }: { existing: string | null }) {
+  const [preview, setPreview] = useState<string | null>(existing);
+  return (
+    <label className="glass relative flex h-44 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-card text-muted">
+      {preview ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={preview} alt="Your car" className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <>
+          <Camera size={26} aria-hidden />
+          <span className="mt-2 text-sm font-semibold">Photo with the plate</span>
+        </>
+      )}
+      <input
+        type="file"
+        name="photo"
+        accept="image/*"
+        required={!existing}
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) setPreview(URL.createObjectURL(f));
+        }}
+      />
+    </label>
   );
 }
 

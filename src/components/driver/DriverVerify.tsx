@@ -64,9 +64,9 @@ export default function DriverVerify({ licenseVerified, review: initialReview, v
     <main className="screen flex flex-col pb-10">
       <div className="flex items-center gap-3">
         <BackButton />
-        <h1 className="font-heading text-2xl font-bold text-ubc">License &amp; car</h1>
+        <h1 className="font-heading text-2xl font-bold text-ubc">Get verified</h1>
       </div>
-      <p className="mt-2 text-muted">Every driver is checked by a real person on the hoppedIn team.</p>
+      <p className="mt-2 text-muted">Checked by a real person. Riders see your badge.</p>
 
       {/* License */}
       <section className="card mt-5 p-5">
@@ -90,7 +90,7 @@ export default function DriverVerify({ licenseVerified, review: initialReview, v
               </span>
               Under review
             </p>
-            <p className="mt-1 text-muted">Our team is checking your photos. This page updates on its own. You can keep using the app meanwhile.</p>
+            <p className="mt-1 text-muted">Usually within a day. You can keep driving meanwhile.</p>
           </div>
         )}
 
@@ -156,7 +156,7 @@ export default function DriverVerify({ licenseVerified, review: initialReview, v
 
       {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-      <button onClick={() => router.push("/map")} className="btn-ubc mt-6 w-full">Back to map</button>
+      <button onClick={() => (window.history.length > 1 ? router.back() : router.push("/pods"))} className="btn-ubc mt-6 w-full">Done</button>
     </main>
   );
 }

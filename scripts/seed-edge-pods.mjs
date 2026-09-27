@@ -76,6 +76,15 @@ const PODS = [
   },
 ];
 
+// Riders with no pod yet, along the Shaughnessy → UBC route, so a new driver has riders to add.
+// Times are set against the same schedule: some fit every day, some only a few days.
+const OPEN_RIDERS = [
+  { name: "Noah Kim", faculty: "Science", year: 2, home: { lat: 49.2525, lng: -123.153 }, area: "Arbutus Ridge", days: [1, 2, 3, 4, 5], arrive_by: "07:50", day_times: { 2: "09:30", 4: "09:30", 5: "10:00" } },
+  { name: "Sofia Rossi", faculty: "Arts", year: 3, home: { lat: 49.2575, lng: -123.168 }, area: "Kitsilano", days: [1, 3, 5], arrive_by: "08:00", day_times: { 5: "10:00" } },
+  { name: "Liam O'Brien", faculty: "Applied Science", year: 1, home: { lat: 49.256, lng: -123.185 }, area: "Dunbar", days: [2, 4], arrive_by: "09:20", day_times: {} },
+  { name: "Emma Zhou", faculty: "Sauder School of Business", year: 4, home: { lat: 49.249, lng: -123.142 }, area: "Shaughnessy", days: [1, 2, 3, 4, 5], arrive_by: "07:50", day_times: {} },
+];
+
 const CHAT = ["Morning! Leaving in 5", "Running 2 min late, sorry", "See you at the usual spot", "Anyone need a coffee stop?", "Thanks for the ride today", "Exam week, might skip Friday"];
 
 async function main() {
@@ -152,7 +161,19 @@ async function main() {
     }
     console.log(`✓ ${spec.key.padEnd(8)} ${d.name} · days ${spec.days.join("")} · ${spec.arrive_by}${Object.keys(spec.day_times).length ? " (varies)" : ""} · ${spec.riders.length} riders · pod ${pod.id}`);
   }
-  console.log(`Done: ${PODS.length} pods, ${u} people.`);
+  for (const rs of OPEN_RIDERS) {
+    const rid = id("000", ++u);
+    must(await db.from("users").insert({
+      id: rid, ubc_email: `${rs.name.toLowerCase().replace(/\W+/g, ".")}@demo.hoppedin.test`, email_verified: true, full_name: rs.name, faculty: rs.faculty, year: rs.year,
+      photo_url: avatar(rs.name), role: "both", rating_avg: 4.9, rating_count: 4, chat_preference: "no_preference",
+    }), "open rider user");
+    must(await db.from("commute_profiles").insert({
+      user_id: rid, mode: "rider", home_lat: rs.home.lat, home_lng: rs.home.lng, home_area: rs.area,
+      campus_lat: CAMPUS.lat, campus_lng: CAMPUS.lng, campus_label: CAMPUS.label, days: rs.days, arrive_by: rs.arrive_by, day_times: rs.day_times, active: true,
+    }), "open rider profile");
+    console.log(`✓ open     ${rs.name} · ${rs.area} · days ${rs.days.join("")}`);
+  }
+  console.log(`Done: ${PODS.length} pods, ${OPEN_RIDERS.length} riders without a pod, ${u} people.`);
 }
 
 main().catch((e) => {

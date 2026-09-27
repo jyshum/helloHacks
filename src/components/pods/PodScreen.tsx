@@ -14,6 +14,7 @@ import SharedBadge from "@/components/SharedBadge";
 import EnableNotifications from "@/components/pods/EnableNotifications";
 import type { LatLng } from "@/lib/geo";
 import PodRouteLine from "@/components/pods/PodRouteLine";
+import RidersForYou from "@/components/pods/RidersForYou";
 import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { formatCents, podShareFor } from "@/lib/pricing";
@@ -177,7 +178,7 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
                   : `from ${driverProfile.home_area ?? "home"}`}
             </p>
 
-            {nextTrip && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
+            {nextTrip && !(isDriver && riders.length === 0) && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
 
             {/* Members */}
             <div className="card mt-4 p-4">
@@ -188,6 +189,12 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
                     <Person m={m} label={m.user_id === mine.user_id ? "You" : first(m.user.full_name)} />
                   </div>
                 ))}
+                {isDriver &&
+                  view.invited.map((m) => (
+                    <div key={m.id} className="opacity-50">
+                      <Person m={m} label="Invited" />
+                    </div>
+                  ))}
                 {isDriver &&
                   Array.from({ length: Math.max(0, view.seatsLeft) }).map((_, i) => (
                     <div key={i} className="flex w-14 shrink-0 flex-col items-center">
@@ -212,6 +219,8 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
                 ))}
               </div>
             )}
+
+            {isDriver && view.seatsLeft > 0 && <RidersForYou podId={pod.id} seatsLeft={view.seatsLeft} />}
 
             <Link href={`/pods/${pod.id}/chat`} className="card mt-4 flex items-center gap-3 p-4">
               <span className="row-icon"><MessageCircle size={18} aria-hidden /></span>
