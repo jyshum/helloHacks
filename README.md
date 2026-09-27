@@ -36,21 +36,6 @@ Getting to UBC by bus can take over an hour each way. Uber costs about $27. Most
   <img src="docs/screenshots/4-price.png" alt="Price breakdown" width="200">
 </p>
 
-## How it works
-
-**Drivers** say where they live, which days they drive, when they need to be on campus (per day), when they head home, and add their car. Hopped fills their empty seats with riders on their way.
-
-**Riders** set the same things and get **pods for you**, ranked by fit. Before joining they can preview everything:
-- the exact route through every pickup, and their own pickup and arrival time for each day
-- how much time they save vs transit (e.g. *~1 hr saved: bus 1h 31m → 33m*)
-- the price, itemised up front (e.g. **$9.24** vs about $27 on Uber)
-
-Then, week to week:
-- **Per-day choices:** for each weekday, *I'm in* or *Don't need a ride*, for the ride to campus and the ride home.
-- **Live trips:** the driver taps *Start pickup*, riders watch the car on the map, get "Alex is here", and the trip ends by itself on arrival.
-- **Automatic payment:** the rider's wallet is charged when the trip ends and the driver is paid. Nobody owes anyone. *(Demo money for now; see below.)*
-- **Pod chat, notifications, ratings, reliability** ("showed up 14/14"), **pause driving** (riders keep their spots for 7 days), and a **commuter directory** to find people directly.
-
 ## System design
 
 Where everything runs and how it connects. Every write goes through an API route using the service role; the browser only talks to Supabase directly for sign-in and Realtime. Deeper detail (data model, matching, payments, edge cases, trade-offs) is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
@@ -102,20 +87,24 @@ flowchart TB
     API -. "fallback" .-> GMAIL
 ```
 
+## How it works
+
+**Drivers** say where they live, which days they drive, when they need to be on campus (per day), when they head home, and add their car. Hopped fills their empty seats with riders on their way.
+
+**Riders** set the same things and get **pods for you**, ranked by fit. Before joining they can preview everything:
+- the exact route through every pickup, and their own pickup and arrival time for each day
+- how much time they save vs transit (e.g. *~1 hr saved: bus 1h 31m → 33m*)
+- the price, itemised up front (e.g. **$9.24** vs about $27 on Uber)
+
+Then, week to week:
+- **Per-day choices:** for each weekday, *I'm in* or *Don't need a ride*, for the ride to campus and the ride home.
+- **Live trips:** the driver taps *Start pickup*, riders watch the car on the map, get "Alex is here", and the trip ends by itself on arrival.
+- **Automatic payment:** the rider's wallet is charged when the trip ends and the driver is paid. Nobody owes anyone. *(Demo money for now; see below.)*
+- **Pod chat, notifications, ratings, reliability** ("showed up 14/14"), **pause driving** (riders keep their spots for 7 days), and a **commuter directory** to find people directly.
+
 ## Pricing
 
 Per rider, per ride: **$5 driver fee + $2 company fee + $0.15/km gas + 5% tax**. The driver receives the driver fee and the gas.
-
-## Features
-
-| | |
-|---|---|
-| **Matching** | Route-aware: rider within 3.5 km of the driver's route, detour ≤ 8 min, driver arrives 0–20 min before the rider needs to. Pickups on the route become walk-to spots. Transit comparison via Google Directions. |
-| **Pods** | Multiple pods per rider (different days), driver approval, invites, per-day times, ride home opt-in, pause/resume, backup pods. |
-| **Trips** | Live location over Supabase Realtime broadcast, pickup checklist, auto-complete on arrival, receipts and ratings. |
-| **Wallet (demo)** | Ledger in Postgres. Charges run inside a single locked database function: all or nothing, at most once per ride, with auto top-up so balances never go negative. Top-ups and cash-outs are idempotent. |
-| **Trust** | UBC email sign-up, driver licence + car photo reviewed by a person (`/admin`), neighbourhood-only locations, message reporting. |
-| **Notifications** | Web push (installable PWA) with email fallback. |
 
 ## Tech
 
