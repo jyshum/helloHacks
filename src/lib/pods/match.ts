@@ -339,7 +339,7 @@ export async function matchRider(riderId: string): Promise<boolean> {
 export async function fitFor(
   riderId: string,
   podId: string
-): Promise<{ fit: Fit; driver: Profile; rider: Profile } | { error: string }> {
+): Promise<{ fit: Fit; driver: Profile; rider: Profile; profile: Profile; covered: number[] } | { error: string }> {
   const admin = createAdminClient();
   const { data: pod } = await admin.from("pods").select("id, driver_id, status").eq("id", podId).maybeSingle();
   if (!pod || pod.status !== "active") return { error: "That pod isn't available any more." };
@@ -354,7 +354,7 @@ export async function fitFor(
   const users = await loadUsers([riderId, d.user_id]);
   const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
   if (!fit) return { error: "That pod doesn't fit your schedule." };
-  return { fit, driver: d, rider: r };
+  return { fit, driver: d, rider: r, profile, covered: Array.from(covered.days) };
 }
 
 // Rider picks a pod. Seeded drivers can't approve, so those riders go straight in.

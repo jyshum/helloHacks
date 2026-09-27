@@ -1,5 +1,5 @@
-// Demo pods around one rider's schedule, covering the edge cases:
-// a perfect match, day-subset matches, a slightly-early driver, per-day times, one day only.
+// Demo pods around one rider's schedule (Mon/Wed 7:45, Tue/Thu 9:15, Fri 9:45), covering the edge cases:
+// a perfect match, a day that's too late, a slightly-early driver, per-day times, one day only.
 // Run: node --env-file=.env.local scripts/seed-edge-pods.mjs   (safe to re-run)
 // Uses its own ID range (5eed9xxx) so it never touches other seed data or real users.
 import { createClient } from "@supabase/supabase-js";
@@ -32,7 +32,7 @@ const PODS = [
     key: "perfect",
     driver: { name: "Maya Chen", faculty: "Applied Science", year: 4, home: { lat: 49.249, lng: -123.1005 }, area: "Kensington" },
     car: { make_model: "Toyota Prius", color: "Silver", plate: "RX4 21M", is_ev: false },
-    days: [1, 2, 3, 4, 5], arrive_by: "08:00", day_times: { 2: "09:30", 4: "09:30", 5: "10:00" }, seats: 4,
+    days: [1, 2, 3, 4, 5], arrive_by: "07:45", day_times: { 2: "09:15", 4: "09:15", 5: "09:45" }, seats: 4,
     riders: [
       { name: "Hana Sato", faculty: "Science", year: 2, home: { lat: 49.2489, lng: -123.1152 }, area: "Riley Park", days: [1, 2, 3, 4, 5] },
       { name: "Leo Martins", faculty: "Arts", year: 3, home: { lat: 49.2489, lng: -123.1285 }, area: "Shaughnessy", days: [2, 4] },
@@ -43,7 +43,7 @@ const PODS = [
     key: "monwed",
     driver: { name: "Ethan Park", faculty: "Sauder School of Business", year: 3, home: { lat: 49.2335, lng: -123.1165 }, area: "Oakridge" },
     car: { make_model: "Honda Civic", color: "Blue", plate: "KP8 33T", is_ev: false },
-    days: [1, 3, 5], arrive_by: "08:00", day_times: {}, seats: 3,
+    days: [1, 3, 5], arrive_by: "07:40", day_times: { 5: "10:00" }, seats: 3,
     riders: [{ name: "Aria Singh", faculty: "Science", year: 1, home: { lat: 49.2409, lng: -123.1298 }, area: "Shaughnessy", days: [1, 3, 5] }],
     trips: { completed: 9, missed: 1 },
   },
@@ -51,7 +51,7 @@ const PODS = [
     key: "tuethu",
     driver: { name: "Zoe Tremblay", faculty: "Kinesiology", year: 2, home: { lat: 49.2445, lng: -123.0755 }, area: "Kensington" },
     car: { make_model: "Mazda CX-5", color: "Red", plate: "MV2 90L", is_ev: false },
-    days: [2, 4], arrive_by: "09:15", day_times: {}, seats: 4,
+    days: [2, 4], arrive_by: "09:00", day_times: {}, seats: 4,
     riders: [
       { name: "Kai Morgan", faculty: "Forestry", year: 3, home: { lat: 49.2461, lng: -123.1003 }, area: "Riley Park", days: [2, 4] },
       { name: "Priya Das", faculty: "Science", year: 4, home: { lat: 49.2458, lng: -123.1231 }, area: "Oakridge", days: [2] },
@@ -62,7 +62,7 @@ const PODS = [
     key: "varies",
     driver: { name: "Omar Haddad", faculty: "Science", year: 5, home: { lat: 49.2412, lng: -123.1148 }, area: "South Cambie" },
     car: { make_model: "Tesla Model 3", color: "White", plate: "EV7 12Q", is_ev: true },
-    days: [1, 3, 5], arrive_by: "08:00", day_times: { 3: "07:50", 5: "10:00" }, seats: 3,
+    days: [1, 3, 5], arrive_by: "07:40", day_times: { 3: "07:30", 5: "09:45" }, seats: 3,
     riders: [{ name: "Chloe Wong", faculty: "Land and Food Systems", year: 2, home: { lat: 49.2441, lng: -123.1227 }, area: "Shaughnessy", days: [1, 5] }],
     trips: { completed: 11, missed: 1 },
   },
@@ -70,7 +70,7 @@ const PODS = [
     key: "friday",
     driver: { name: "Lily Nguyen", faculty: "Arts", year: 3, home: { lat: 49.2512, lng: -123.1101 }, area: "Riley Park" },
     car: { make_model: "Hyundai Kona", color: "Green", plate: "LN5 48B", is_ev: true },
-    days: [5], arrive_by: "09:50", day_times: {}, seats: 3,
+    days: [5], arrive_by: "09:30", day_times: {}, seats: 3,
     riders: [],
     trips: { completed: 3, missed: 0 },
   },

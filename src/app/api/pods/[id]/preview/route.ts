@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!me) return jsonError("Sign in first.", 401);
   const res = await fitFor(me.id, params.id);
   if ("error" in res) return jsonError(res.error, 409);
-  const { fit, driver: dp, rider: rp } = res;
+  const { fit, driver: dp, rider: rp, profile, covered } = res;
 
   const admin = createAdminClient();
   const [{ data: driver }, { data: car }, { data: members }, { data: trips }, { data: pod }] = await Promise.all([
@@ -34,23 +34,29 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const campusPos = pod ? { lat: pod.campus_lat, lng: pod.campus_lng } : { lat: dp.campus_lat, lng: dp.campus_lng };
 
-  // Each of your days, with that day's times (drivers can arrive at different times per day).
-  // …and that day's stops in pickup order (other riders who ride that day + you),
-  // so the map can draw the pod's real drive for the day you tap.
-  const schedule = fit.days.map((d) => {
-    const mine = pickupOn(fit.pickupTime, dp, fit.days, d) ?? fit.pickupTime;
+  // Every weekday, so you can tap any day. Days that work carry your times and the day's stops
+  // in pickup order (so the map draws the pod's real drive). Other days say why not.
+  const firstName = (driver?.full_name ?? "Driver").split(" ")[0];
+  const DAYS = ["", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays"];
+  const schedule = ([1, 2, 3, 4, 5] as Weekday[]).map((d) => {
+    const drives = dp.days.includes(d);
     const others = (members ?? [])
-      .filter((m) => (m.days as number[]).includes(d) && m.pickup_lat != null)
+      .filter((m) => drives && (m.days as number[]).includes(d) && m.pickup_lat != null)
       .map((m) => ({ lat: m.pickup_lat as number, lng: m.pickup_lng as number, me: false, time: pickupOn(m.pickup_time, dp, m.days as number[], d) ?? "99:99" }));
-    const stops = [...others, { lat: fit.pickup.lat, lng: fit.pickup.lng, me: true, time: mine }].sort((a, b) => a.time.localeCompare(b.time));
-    return {
-      day: d,
-      pickupTime: mine,
-      arriveBy: fromMinutes(arriveOn(dp, d as Weekday)),
-      youNeed: fromMinutes(arriveOn(rp, d as Weekday)),
-      riders: others.length,
-      stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })),
-    };
+    const arriveBy = drives ? fromMinutes(arriveOn(dp, d)) : null;
+    const youNeed = profile.days.includes(d) ? fromMinutes(arriveOn(profile, d)) : null;
+    const ok = fit.days.includes(d);
+    const mine = ok ? pickupOn(fit.pickupTime, dp, fit.days, d) ?? fit.pickupTime : null;
+    const stops = [...others, ...(mine ? [{ lat: fit.pickup.lat, lng: fit.pickup.lng, me: true, time: mine }] : [])].sort((a, b) => a.time.localeCompare(b.time));
+    let note: string | null = null;
+    if (!drives) note = `${firstName} doesn't drive ${DAYS[d]}`;
+    else if (!youNeed) note = `You don't commute ${DAYS[d]}`;
+    else if (covered.includes(d)) note = "Your other pod has this day";
+    else if (!ok) {
+      const gap = arriveOn(profile, d) - arriveOn(dp, d);
+      note = gap < 0 ? `Gets there ${-gap} min too late for you` : `Gets there ${gap} min too early for you`;
+    }
+    return { day: d, ok, note, drives, pickupTime: mine, arriveBy, youNeed, riders: others.length, stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })) };
   });
 
   const day = fit.days[0] as Weekday;

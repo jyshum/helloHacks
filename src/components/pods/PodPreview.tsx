@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { BadgeCheck, GraduationCap, MapPin, Timer, X } from "lucide-react";
+import { BadgeCheck, CalendarX, GraduationCap, MapPin, Timer, X } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
@@ -36,7 +36,17 @@ type Preview = {
     detourMinutes: number;
   };
   routeStart: LatLng;
-  schedule: { day: number; pickupTime: string; arriveBy: string; youNeed: string; riders: number; stops: (LatLng & { me: boolean })[] }[];
+  schedule: {
+    day: number;
+    ok: boolean;
+    note: string | null;
+    drives: boolean;
+    pickupTime: string | null;
+    arriveBy: string | null;
+    youNeed: string | null;
+    riders: number;
+    stops: (LatLng & { me: boolean })[];
+  }[];
   me: { faculty: string | null; year: number | null };
 };
 
@@ -67,7 +77,9 @@ export default function PodPreview({
       .catch(() => setError("Couldn't load this pod."));
   }, [podId]);
 
-  const today = data ? data.schedule.find((x) => x.day === day) ?? data.schedule[0] : null;
+  const today = data ? data.schedule.find((x) => x.day === day) ?? data.schedule.find((x) => x.ok) ?? data.schedule[0] : null;
+  // You're only on the map on days you'd ride; other days show the pod without you.
+  const meOff = today && !today.stops.some((st) => st.me) ? [{ id: "me", pos: data!.fit.pickup, kind: "rider" as const, name: meName, photo: mePhoto }] : [];
   const saved = data && data.fit.transitMinutes != null ? data.fit.transitMinutes - data.fit.driveMinutes : null;
   const sameFaculty = data ? data.riders.filter((r) => r.faculty && r.faculty === data.me.faculty).length + (data.driver.faculty === data.me.faculty ? 1 : 0) : 0;
 
@@ -89,12 +101,14 @@ export default function PodPreview({
                       ? { id: "me", pos: { lat: st.lat, lng: st.lng }, kind: "rider" as const, name: meName, photo: mePhoto }
                       : { id: `s${i}`, pos: { lat: st.lat, lng: st.lng }, kind: "pickup" as const }
                   ),
+                  ...meOff,
                   ...(data.campusPos ? [{ id: "campus", pos: data.campusPos, kind: "dropoff" as const }] : []),
                 ]}
-                fit={[data.routeStart, ...today.stops, ...(data.campusPos ? [data.campusPos] : [])]}
-                bottomPadding={30}
+                fit={[...(today.drives ? [data.routeStart] : []), ...today.stops, ...meOff.map((m) => m.pos), ...(data.campusPos ? [data.campusPos] : [])]}
+                bottomPadding={0}
+                topPadding={40}
               >
-                {data.campusPos && <PodRouteLine start={data.routeStart} stops={today.stops} end={data.campusPos} />}
+                {data.campusPos && today.drives && <PodRouteLine start={data.routeStart} stops={today.stops} end={data.campusPos} />}
               </BaseMap>
             </APIProvider>
           )}
@@ -139,16 +153,14 @@ export default function PodPreview({
               {/* Your ride: tap a day to see that day's times */}
               <div className="card mt-4 px-4 pb-1 pt-4">
                 <div className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map((d) => {
-                    const mine = data.schedule.some((x) => x.day === d);
+                  {data.schedule.map(({ day: d, ok }) => {
                     const on = today?.day === d;
                     return (
                       <button
                         key={d}
-                        disabled={!mine}
                         onClick={() => setDay(d)}
                         className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
-                          on ? "bg-ubc text-white shadow-glow" : mine ? "bg-ubc/10 text-ubc" : "bg-ink/[0.03] text-muted/40"
+                          on ? (ok ? "bg-ubc text-white shadow-glow" : "bg-ink/60 text-white") : ok ? "bg-ubc/10 text-ubc" : "bg-ink/[0.04] text-muted/60"
                         }`}
                         aria-pressed={on}
                       >
@@ -157,16 +169,31 @@ export default function PodPreview({
                     );
                   })}
                 </div>
-                {today && (
+                {today && today.ok && today.pickupTime && today.arriveBy && (
                   <div className="mt-2 divide-y divide-ink/5">
                     <Line icon={<MapPin size={18} aria-hidden />} title={`Pickup ${prettyTime(today.pickupTime)}`} sub={data.fit.pickupLabel} />
                     <Line
                       icon={<GraduationCap size={18} aria-hidden />}
                       title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
-                      sub={today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
+                      sub={today.youNeed && today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
                     />
                     <p className="py-3 text-[13px] text-muted">
                       {today.riders ? `${today.riders + 1} riders this day` : "Just you and the driver this day"}
+                    </p>
+                  </div>
+                )}
+                {today && !today.ok && (
+                  <div className="mt-2 divide-y divide-ink/5">
+                    <Line icon={<CalendarX size={18} aria-hidden />} title={today.note ?? "Not your day"} />
+                    {today.arriveBy && (
+                      <Line
+                        icon={<GraduationCap size={18} aria-hidden />}
+                        title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
+                        sub={today.youNeed ? `Your class: ${prettyTime(today.youNeed)}` : undefined}
+                      />
+                    )}
+                    <p className="py-3 text-[13px] text-muted">
+                      {!today.drives ? "No ride this day" : today.riders ? `${today.riders} rider${today.riders === 1 ? "" : "s"} this day` : "Just the driver this day"}
                     </p>
                   </div>
                 )}

@@ -29,10 +29,11 @@ type Props = {
   routes?: { id: string; path: LatLng[]; color?: string; opacity?: number; weight?: number }[];
   fit?: LatLng[] | null; // fit camera to these points when they change
   bottomPadding?: number; // px hidden behind the bottom sheet
+  topPadding?: number; // px hidden behind floating buttons
   children?: React.ReactNode;
 };
 
-export default function BaseMap({ me, cars = [], pins = [], routes = [], fit, bottomPadding = 280, children }: Props) {
+export default function BaseMap({ me, cars = [], pins = [], routes = [], fit, bottomPadding = 280, topPadding = 110, children }: Props) {
   const loaded = useApiIsLoaded();
   return (
     <Map
@@ -87,7 +88,7 @@ export default function BaseMap({ me, cars = [], pins = [], routes = [], fit, bo
             )
           )}
           {me && <Marker position={me} zIndex={1000} icon={icon(SELF_ICON, 36, 36, 18, 18)} />}
-          <CameraFit points={fit} bottomPadding={bottomPadding} />
+          <CameraFit points={fit} bottomPadding={bottomPadding} topPadding={topPadding} />
         </>
       )}
       {children}
@@ -96,7 +97,7 @@ export default function BaseMap({ me, cars = [], pins = [], routes = [], fit, bo
 }
 
 // Re-centres the camera when the given point set changes.
-function CameraFit({ points, bottomPadding }: { points?: LatLng[] | null; bottomPadding: number }) {
+function CameraFit({ points, bottomPadding, topPadding }: { points?: LatLng[] | null; bottomPadding: number; topPadding: number }) {
   const map = useMap();
   const key = points?.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join("|");
   useEffect(() => {
@@ -108,12 +109,12 @@ function CameraFit({ points, bottomPadding }: { points?: LatLng[] | null; bottom
     }
     const b = new google.maps.LatLngBounds();
     points.forEach((p) => b.extend(p));
-    map.fitBounds(b, { top: 110, left: 50, right: 50, bottom: bottomPadding + 30 });
+    map.fitBounds(b, { top: topPadding, left: 50, right: 50, bottom: bottomPadding + 30 });
     // Points right next to each other (e.g. driver at the pickup) would zoom in too far.
     google.maps.event.addListenerOnce(map, "idle", () => {
       if ((map.getZoom() ?? 0) > 16) map.setZoom(16);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, key, bottomPadding]);
+  }, [map, key, bottomPadding, topPadding]);
   return null;
 }
