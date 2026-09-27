@@ -1,9 +1,9 @@
 // Cuts the two recorded phones into the ~70 s demo video.
-// Reads out/demo/{driver,rider}.webm + cues.json (from record.mjs), writes out/demo/hoppedIn-demo.mp4.
+// Reads out/demo/{driver,rider}.mp4 + cues.json (from record.mjs), writes out/demo/Hopped-demo.mp4.
 // The cut is described below in terms of named moments, so a re-recording needs no re-timing.
 // Run: node scripts/demo/edit.mjs
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 const OUT = new URL("../../out/demo/", import.meta.url).pathname;
@@ -13,7 +13,7 @@ const W = 1920, H = 1080;
 const PHONE_H = 930; // on-screen phone height (screen area), px
 const PHONE_W = Math.round((PHONE_H * 780) / 1688);
 
-const { cues, ended, people } = JSON.parse(readFileSync(OUT + "cues.json", "utf8"));
+const { cues, people } = JSON.parse(readFileSync(OUT + "cues.json", "utf8"));
 const cue = (key) => {
   const [who, name] = key.split(":");
   const c = cues.find((x) => x.who === who && x.name === name);
@@ -26,31 +26,48 @@ const C = (key, dt = 0) => cue(key) + dt;
 // layout: "driver" | "rider" (one phone, centred) | "split" (both). active: which phone is lit.
 // Times are wall-clock seconds of the recording (both phones share one clock).
 const plan = [
-  { card: "title", dur: 2.4 },
-  // Driver: open the app, sign up, onboard (car and all), pod is ready.
-  { layout: "driver", from: C("driver:landing", -0.4), to: C("driver:pod_ready", 1.6), speed: 2.5 },
-  // Rider: same, then finds the driver's pod.
-  { layout: "rider", from: C("rider:landing", -0.2), to: C("rider:pods_for_you"), speed: 2.5 },
-  { layout: "rider", from: C("rider:pods_for_you"), to: C("rider:asked", 1.0), speed: 1.4,
+  { card: "title", dur: 2 },
+  // Driver: open the app, sign up (faculty + year), onboard (car and all), pod is ready.
+  { layout: "driver", from: C("driver:landing", -0.4), to: C("driver:faculty_year", -0.2), speed: 3 },
+  { layout: "driver", from: C("driver:faculty_year", -0.2), to: C("driver:faculty_year", 1.9), speed: 1.2,
+    zoom: { who: "driver", from: C("driver:faculty_year", -0.2), to: C("driver:faculty_year", 1.9), scale: 1.3, origin: [50, 58] } },
+  { layout: "driver", from: C("driver:faculty_year", 1.9), to: C("driver:ride_home_step", -0.3), speed: 3.2 },
+  { layout: "driver", from: C("driver:ride_home_step", -0.3), to: C("driver:ride_home_step", 1.6), speed: 1.3,
+    zoom: { who: "driver", from: C("driver:ride_home_step", -0.3), to: C("driver:ride_home_step", 1.6), scale: 1.2, origin: [50, 30] } },
+  { layout: "driver", from: C("driver:ride_home_step", 1.6), to: C("driver:pod_ready", 1.0), speed: 3.2 },
+  // Rider: same steps, faster; then finds the driver's pod (same faculty is highlighted).
+  { layout: "rider", from: C("rider:landing", -0.2), to: C("rider:pods_for_you"), speed: 3.4 },
+  { layout: "rider", from: C("rider:pods_for_you"), to: C("rider:asked", 0.8), speed: 1.7,
     zoom: { who: "rider", from: C("rider:fare_breakdown", -0.4), to: C("rider:pending", -0.6), scale: 1.32, origin: [50, 80] } },
   // Live match: the request lands on the driver's phone, driver approves, rider is in.
-  { layout: "split", active: "driver", from: C("driver:request_arrives", -1.4), to: C("driver:approved", 0.7), speed: 1,
-    zoom: { who: "driver", from: C("driver:request_arrives", -0.4), to: C("driver:approved", 0.7), scale: 1.25, origin: [50, 72] } },
-  { layout: "split", active: "rider", from: C("driver:approved", 0.7), to: C("rider:in_pod", 1.4), speed: 4 },
+  { layout: "split", active: "driver", from: C("driver:request_arrives", -1.2), to: C("driver:approved", 0.6), speed: 1,
+    zoom: { who: "driver", from: C("driver:request_arrives", -0.4), to: C("driver:approved", 0.6), scale: 1.25, origin: [50, 72] } },
+  { layout: "split", active: "rider", from: C("driver:approved", 0.6), to: C("rider:in_pod", 1.2), speed: 5 },
+  // Ride home: tap in for Monday, see the route and home-by time.
+  { layout: "rider", from: C("rider:ride_home_sheet", -1.2), to: C("rider:ride_home_in", 0.6), speed: 1.8,
+    zoom: { who: "rider", from: C("rider:ride_home_sheet", -0.3), to: C("rider:ride_home_in", 0.4), scale: 1.2, origin: [50, 50] } },
   // Demo wallet top-up.
-  { layout: "rider", from: C("rider:wallet", -0.5), to: C("rider:paid", 1.5), speed: 1.4,
-    zoom: { who: "rider", from: C("rider:paying", -0.5), to: C("rider:paid", 1.5), scale: 1.3, origin: [50, 86] } },
+  { layout: "rider", from: C("rider:wallet", -0.4), to: C("rider:paid", 1.3), speed: 1.8,
+    zoom: { who: "rider", from: C("rider:paying", -0.5), to: C("rider:paid", 1.3), scale: 1.3, origin: [50, 86] } },
   // Trip day: start, car drives to the rider, pickup, ride to campus, auto-pay receipts.
-  { layout: "split", active: "driver", from: C("driver:start_pickup", -0.9), to: C("driver:driving", 0.4), speed: 1.3 },
-  { layout: "split", active: "rider", from: C("driver:driving", 0.4), to: C("rider:driver_here", -0.4), speed: 3 },
-  { layout: "split", active: "both", from: C("rider:driver_here", -0.4), to: C("driver:picked_up", 1.0), speed: 1,
+  { layout: "split", active: "driver", from: C("driver:start_pickup", -0.8), to: C("driver:driving", 0.3), speed: 1.4 },
+  { layout: "split", active: "rider", from: C("driver:driving", 0.3), to: C("rider:driver_here", -0.4), speed: 3.5 },
+  { layout: "split", active: "both", from: C("rider:driver_here", -0.4), to: C("driver:picked_up", 0.9), speed: 1,
     zoom: { who: "rider", from: C("rider:driver_here", -0.4), to: C("driver:picked_up", -0.3), scale: 1.2, origin: [50, 62] } },
-  { layout: "split", active: "both", from: C("driver:picked_up", 1.0), to: C("driver:arrived", -0.4), speed: 4 },
-  { layout: "split", active: "both", from: C("driver:arrived", -0.4), to: C("rider:receipt", 3.4), speed: 1 },
-  { card: "end", dur: 3 },
+  { layout: "split", active: "both", from: C("driver:picked_up", 0.9), to: C("driver:arrived", -0.4), speed: 5 },
+  { layout: "split", active: "both", from: C("driver:arrived", -0.4), to: C("rider:receipt", 3.2), speed: 1 },
+  { card: "end", dur: 2.6 },
 ];
 
 // ---- Timeline maths --------------------------------------------------------------------------
+// Hard cap: if the cut runs long, speed every clip up evenly so the whole video fits.
+const MAX_SECONDS = 69.5;
+{
+  const cards = plan.filter((p) => p.card).reduce((t, p) => t + p.dur, 0);
+  const clips = plan.filter((p) => !p.card).reduce((t, p) => t + (p.to - p.from) / p.speed, 0);
+  const k = clips / (MAX_SECONDS - cards);
+  if (k > 1) for (const p of plan) if (!p.card) p.speed *= k;
+}
 const segs = [];
 let T = 0;
 for (const p of plan) {
@@ -112,22 +129,14 @@ function stateAt(t) {
 }
 
 // ---- Render ------------------------------------------------------------------------------------
-const probe = (f) => Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", f]).toString());
 
 async function main() {
   rmSync(WORK, { recursive: true, force: true });
   mkdirSync(WORK + "frames", { recursive: true });
 
-  // Each phone's video can start late (blank pages aren't recorded): video time = wall - offset.
-  const dur = { driver: probe(OUT + "driver.webm"), rider: probe(OUT + "rider.webm") };
-  const end = ended ?? { driver: Math.max(dur.driver, dur.rider), rider: Math.max(dur.driver, dur.rider) };
-  const offset = { driver: end.driver - dur.driver, rider: end.rider - dur.rider };
-  console.log(`Cut: ${TOTAL.toFixed(1)} s. Video offsets: driver ${offset.driver.toFixed(1)} s, rider ${offset.rider.toFixed(1)} s.`);
-
-  // Constant frame rate, every frame a keyframe: exact, fast seeking while rendering.
-  for (const who of ["driver", "rider"]) {
-    execFileSync("ffmpeg", ["-v", "error", "-y", "-i", OUT + who + ".webm", "-vf", `fps=${FPS}`, "-c:v", "libx264", "-g", "1", "-crf", "12", "-pix_fmt", "yuv420p", WORK + who + ".mp4"]);
-  }
+  console.log(`Cut: ${TOTAL.toFixed(1)} s`);
+  // Both phones were captured on one clock from t = 0, so video time = recording time.
+  for (const who of ["driver", "rider"]) copyFileSync(OUT + who + ".mp4", WORK + who + ".mp4");
 
   writeFileSync(WORK + "stage.html", stageHtml());
   const browser = await chromium.launch();
@@ -138,16 +147,16 @@ async function main() {
   const frames = Math.round(TOTAL * FPS);
   for (let f = 0; f < frames; f++) {
     const st = stateAt(f / FPS);
-    const vt = st.wall == null ? null : { driver: Math.max(0, st.wall - offset.driver), rider: Math.max(0, st.wall - offset.rider) };
+    const vt = st.wall == null ? null : { driver: st.wall, rider: st.wall };
     await page.evaluate(({ st, vt }) => window.apply(st, vt), { st, vt });
     await page.screenshot({ path: `${WORK}frames/${String(f).padStart(5, "0")}.jpg`, type: "jpeg", quality: 94 });
     if (f % 150 === 0) console.log(`  frame ${f}/${frames}`);
   }
   await browser.close();
 
-  execFileSync("ffmpeg", ["-v", "error", "-y", "-framerate", String(FPS), "-i", WORK + "frames/%05d.jpg", "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p", "-movflags", "+faststart", OUT + "hoppedIn-demo.mp4"]);
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-framerate", String(FPS), "-i", WORK + "frames/%05d.jpg", "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p", "-movflags", "+faststart", OUT + "Hopped-demo.mp4"]);
   rmSync(WORK, { recursive: true, force: true });
-  console.log(`Done: out/demo/hoppedIn-demo.mp4 (${TOTAL.toFixed(1)} s)`);
+  console.log(`Done: out/demo/Hopped-demo.mp4 (${TOTAL.toFixed(1)} s)`);
 }
 
 function stageHtml() {
@@ -170,14 +179,14 @@ function stageHtml() {
   .tag{position:absolute;top:-58px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:999px;
     background:rgba(255,255,255,.8);box-shadow:0 6px 20px rgba(0,33,69,.10);color:#002145;font-weight:650;font-size:21px;white-space:nowrap}
   .card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;
-    background:radial-gradient(900px 600px at 50% 40%,#0a3a78 0,#002145 70%);color:#fff;text-align:center}
-  .card h1{font-size:132px;font-weight:800;letter-spacing:-4px}
-  .card p{margin-top:14px;font-size:40px;color:rgba(255,255,255,.82);font-weight:500}
+    background:radial-gradient(900px 600px at 50% 40%,#0b3570 0,#00204F 70%);color:#fff;text-align:center}
+  .card .logo{height:120px}
+  .card p{margin-top:34px;font-size:40px;color:rgba(255,255,255,.82);font-weight:500}
   .card small{margin-top:40px;font-size:22px;color:rgba(255,255,255,.55);font-weight:500}
   </style></head><body>
   ${phone("driver")}${phone("rider")}
-  <div class="card" id="title"><h1>hoppedIn</h1><p>Carpool to UBC with your pod.</p></div>
-  <div class="card" id="end"><h1>hoppedIn</h1><p>Same route. Same people. Every week.</p><small>Payments shown with demo money</small></div>
+  <div class="card" id="title"><img class="logo" src="file:///Users/jshum/Desktop/code-folders/helloHacks/public/brand/logo.png" alt="Hopped"><p>Carpool to UBC with your pod.</p></div>
+  <div class="card" id="end"><img class="logo" src="file:///Users/jshum/Desktop/code-folders/helloHacks/public/brand/logo.png" alt="Hopped"><p>Same route. Same people. Every week.</p><small>Payments shown with demo money</small></div>
   <script>
   const vids = { driver: document.querySelector("#driver video"), rider: document.querySelector("#rider video") };
   function seek(v, t) {

@@ -4,11 +4,12 @@
 //   1. the verification email (we open the same link the email would contain),
 //   2. the clock (DEMO_CLOCK_OFFSET_MS makes it Monday 6:50am),
 //   3. GPS (the driver's browser is fed points along the real route).
-// Output: out/demo/{driver,rider}.webm + out/demo/cues.json (moments, for the edit).
+// Output: out/demo/{driver,rider}.mp4 (full phone resolution, both on one clock) + out/demo/cues.json.
 //
 // Needs: `npm run build` first. Run: node --env-file=.env.local scripts/demo/record.mjs
 import { spawn } from "node:child_process";
-import { mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 
@@ -19,7 +20,7 @@ const KEY = process.env.GOOGLE_MAPS_SERVER_KEY ?? process.env.NEXT_PUBLIC_GOOGLE
 
 const PEOPLE = {
   driver: { name: "Alex Rivera", email: "alexrivera.hoppedin.demo@student.ubc.ca", faculty: "Applied Science", year: "3", place: "Queen Elizabeth Park", time: "08:00", car: { make: "Honda Civic", color: "White", plate: "DEMO 01" } },
-  rider: { name: "Sam Lee", email: "samlee.hoppedin.demo@student.ubc.ca", faculty: "Science", year: "2", place: "Douglas Park Vancouver", time: "08:15" },
+  rider: { name: "Sam Lee", email: "samlee.hoppedin.demo@student.ubc.ca", faculty: "Applied Science", year: "2", place: "Douglas Park Vancouver", time: "08:15" },
 };
 const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -144,6 +145,40 @@ async function drive(ctx, points, everyMs, until) {
   }
 }
 
+// ---- Capture ------------------------------------------------------------------------------
+// Frames straight from the browser at full phone resolution, stamped on the shared clock (T0).
+// The browser only sends a frame when the screen changes, so each frame lasts until the next.
+const T0 = Date.now();
+async function capture(ctx, page, who) {
+  const dir = OUT + "raw/" + who + "/";
+  mkdirSync(dir, { recursive: true });
+  const frames = [];
+  const cdp = await ctx.newCDPSession(page);
+  cdp.on("Page.screencastFrame", ({ data, sessionId }) => {
+    const file = `${dir}${String(frames.length).padStart(6, "0")}.jpg`;
+    writeFileSync(file, Buffer.from(data, "base64"));
+    frames.push({ file, t: (Date.now() - T0) / 1000 });
+    cdp.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
+  });
+  await cdp.send("Page.startScreencast", { format: "jpeg", quality: 88, maxWidth: 1170, maxHeight: 2532, everyNthFrame: 1 });
+  return frames;
+}
+
+// Frames → constant 30 fps video (every frame a keyframe, for exact seeking in the edit).
+function toVideo(who, frames, endT) {
+  if (!frames.length) return;
+  const lines = ["ffconcat version 1.0"];
+  frames.forEach((f, i) => {
+    const start = i === 0 ? 0 : f.t;
+    const next = i + 1 < frames.length ? frames[i + 1].t : endT;
+    lines.push(`file '${f.file}'`, `duration ${Math.max(0.001, next - start).toFixed(3)}`);
+  });
+  lines.push(`file '${frames[frames.length - 1].file}'`);
+  writeFileSync(OUT + `raw/${who}.txt`, lines.join("\n"));
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", OUT + `raw/${who}.txt`,
+    "-vf", "fps=30,scale=780:1688:flags=lanczos,format=yuv420p", "-c:v", "libx264", "-g", "1", "-crf", "15", OUT + who + ".mp4"]);
+}
+
 // ---- Scenes ------------------------------------------------------------------------------
 async function signUp(page, who) {
   const p = PEOPLE[who];
@@ -157,8 +192,13 @@ async function signUp(page, who) {
   await type(page, "#full_name", p.name);
   await type(page, "#email", p.email);
   await type(page, "#password", "demo-ride-2026");
+  // Faculty + year: shown on your profile and pod cards, and same-faculty riders are highlighted.
+  mark(who, "faculty_year");
+  await sleep(400);
   await page.selectOption("#faculty", p.faculty);
+  await sleep(700);
   await page.selectOption("#year", p.year);
+  await sleep(700);
   const resp = page.waitForResponse((r) => r.url().includes("/api/signup"));
   await tap(page, page.getByRole("button", { name: "Continue" }));
   const { emailLink } = await (await resp).json();
@@ -201,6 +241,10 @@ async function onboardDriver(page) {
   await tap(page, page.getByRole("button", { name: "Continue" }));
   await schedule(page, p.time);
   mark("driver", "schedule_set");
+  await tap(page, page.getByRole("button", { name: "Continue" }));
+  await page.getByText("Heading home?").waitFor();
+  mark("driver", "ride_home_step");
+  await sleep(1400);
   await tap(page, page.getByRole("button", { name: "Continue" }));
   await sleep(600);
   await tap(page, page.getByRole("button", { name: "Continue" }));
@@ -259,6 +303,25 @@ async function approve(driver, rider) {
   await rider.locator("h1").filter({ hasText: / by \d/ }).first().waitFor({ timeout: 45000 });
   mark("rider", "in_pod");
   await sleep(2500);
+}
+
+// Rider taps into Monday's ride home: route sheet, home-by time, "I'm in".
+async function rideHome(rider) {
+  const card = rider.locator(".card").filter({ hasText: /^Ride home/ }).first();
+  await card.scrollIntoViewIfNeeded();
+  await sleep(700);
+  await card.locator("span").first().click();
+  await rider.getByText(/^Home by /).waitFor({ timeout: 20000 });
+  mark("rider", "ride_home_sheet");
+  await sleep(2600);
+  await tap(rider, rider.getByRole("button", { name: /^I'm in for / }));
+  await rider.getByRole("button", { name: "Don't need a ride" }).last().waitFor({ timeout: 15000 });
+  mark("rider", "ride_home_in");
+  await sleep(1500);
+  await tap(rider, rider.getByRole("button", { name: "Close" }).last());
+  await sleep(800);
+  await rider.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  await sleep(600);
 }
 
 async function topUp(rider) {
@@ -355,16 +418,15 @@ async function main() {
       locale: "en-CA",
       geolocation: { latitude: pos.lat, longitude: pos.lng, accuracy: 10 },
       permissions: ["geolocation"],
-      recordVideo: { dir: OUT + "raw/" + who, size: { width: 780, height: 1688 } },
     });
     const page = await ctx.newPage();
     page.on("console", (m) => ["error", "warning"].includes(m.type()) && process.env.DEBUG && console.log(`  [${who} console] ${m.text().slice(0, 200)}`));
     page.on("websocket", (ws) => process.env.DEBUG && ws.on("framereceived", (f) => String(f.payload).includes("presence") && console.log(`  [${who} ws] ${String(f.payload).slice(0, 160)}`)));
-    born[who] = Date.now();
-    return { ctx, page };
+    return { ctx, page, frames: await capture(ctx, page, who) };
   };
   const D = await make("driver", { lat: 49.2418, lng: -123.1127 });
   const R = await make("rider", { lat: 49.2539, lng: -123.1206 });
+  born.driver = born.rider = T0;
 
   try {
     await signUp(D.page, "driver");
@@ -372,6 +434,7 @@ async function main() {
     await signUp(R.page, "rider");
     await onboardRider(R.page);
     await approve(D.page, R.page);
+    await rideHome(R.page);
     await topUp(R.page);
 
     const ids = {};
@@ -384,20 +447,15 @@ async function main() {
     await R.page.screenshot({ path: OUT + "fail-rider.png" }).catch(() => {});
     process.exitCode = 1;
   } finally {
-    // Wall time when recording stopped, per phone. A video can start late (blank pages
-    // aren't recorded), so the edit lines footage up as: video time = cue time - (ended - duration).
-    const ended = { driver: (Date.now() - born.driver) / 1000, rider: (Date.now() - born.rider) / 1000 };
+    const endT = (Date.now() - T0) / 1000;
     await D.ctx.close();
     await R.ctx.close();
     await browser.close();
     srv.kill();
-    for (const who of ["driver", "rider"]) {
-      const f = readdirSync(OUT + "raw/" + who)[0];
-      if (f) renameSync(OUT + "raw/" + who + "/" + f, OUT + who + ".webm");
-    }
-    writeFileSync(OUT + "cues.json", JSON.stringify({ cues, ended, people: Object.fromEntries(Object.entries(PEOPLE).map(([k, v]) => [k, v.name])) }, null, 2));
+    for (const [who, P] of [["driver", D], ["rider", R]]) toVideo(who, P.frames, endT);
+    writeFileSync(OUT + "cues.json", JSON.stringify({ cues, aligned: true, people: Object.fromEntries(Object.entries(PEOPLE).map(([k, v]) => [k, v.name])) }, null, 2));
     if (!process.env.KEEP_ACCOUNTS) await cleanup();
-    console.log(process.exitCode ? "Failed. See out/demo/fail-*.png" : "Recorded: out/demo/driver.webm, rider.webm, cues.json");
+    console.log(process.exitCode ? "Failed. See out/demo/fail-*.png" : "Recorded: out/demo/driver.mp4, rider.mp4, cues.json");
   }
 }
 main();
