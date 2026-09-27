@@ -17,7 +17,7 @@ import PodRouteLine from "@/components/pods/PodRouteLine";
 import RidersForYou from "@/components/pods/RidersForYou";
 import RideHome from "@/components/pods/RideHome";
 import MorningRide from "@/components/pods/MorningRide";
-import { addMinutes, arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyDuration, prettyTime, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
+import { addMinutes, arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettySaved, prettyTime, shortDuration, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { fareBetween, formatCents } from "@/lib/pricing";
 import type { Weekday } from "@/lib/pods/types";
@@ -375,11 +375,11 @@ function TimeSaved({ transit, drive }: { transit: number | null; drive: number |
   if (transit == null || drive == null || transit - drive < 5) return null;
   return (
     <div className="flex items-center justify-between rounded-2xl bg-green/10 px-4 py-3 text-green">
-      <span className="flex items-center gap-2 font-semibold">
-        <Timer size={18} aria-hidden /> {prettyDuration(transit - drive)} saved
+      <span className="flex items-center gap-2 whitespace-nowrap font-semibold">
+        <Timer size={18} aria-hidden /> ~{prettySaved(transit - drive)} saved
       </span>
-      <span className="text-sm">
-        {prettyDuration(transit)} → {prettyDuration(drive)}
+      <span className="whitespace-nowrap text-sm">
+        Bus {shortDuration(transit)} → {shortDuration(drive)}
       </span>
     </div>
   );

@@ -104,7 +104,7 @@ async function main() {
     const card = R.page.locator('[role="button"]').filter({ hasText: "Mei" }).first();
     await card.waitFor({ timeout: 60000 });
     await card.locator("p").first().click();
-    await R.page.getByText(/min saved/).waitFor({ timeout: 30000 });
+    await R.page.getByText(/ saved$/).waitFor({ timeout: 30000 });
     await sleep(5000);
     await shot(R.page, "3-time-saved");
     await R.page.getByText(/a ride$/).first().click();

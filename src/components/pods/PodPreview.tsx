@@ -8,7 +8,7 @@ import { BadgeCheck, CalendarX, GraduationCap, House, MessageCircle, Wallet as W
 import BaseMap from "@/components/app/BaseMap";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
-import { prettyDuration, prettyTime } from "@/lib/pods/time";
+import { prettyDuration, prettySaved, prettyTime, shortDuration } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { formatCents, type Fare } from "@/lib/pricing";
 import FareBreakdown from "@/components/trip/FareBreakdown";
@@ -157,10 +157,10 @@ export default function PodPreview({
 
               {saved != null && saved >= 5 && (
                 <div className="mt-4 flex items-center justify-between rounded-2xl bg-green/10 px-4 py-3 text-green">
-                  <span className="flex items-center gap-2 text-lg font-semibold">
-                    <Timer size={19} aria-hidden /> {prettyDuration(saved)} saved
+                  <span className="flex items-center gap-2 whitespace-nowrap text-lg font-semibold">
+                    <Timer size={19} aria-hidden /> ~{prettySaved(saved)} saved
                   </span>
-                  <span className="text-sm">Bus {prettyDuration(data.fit.transitMinutes!)} → {prettyDuration(data.fit.driveMinutes)}</span>
+                  <span className="whitespace-nowrap text-sm">Bus {shortDuration(data.fit.transitMinutes!)} → {shortDuration(data.fit.driveMinutes)}</span>
                 </div>
               )}
 

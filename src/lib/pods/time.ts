@@ -27,6 +27,17 @@ export function prettyDuration(mins: number): string {
   return m % 60 ? `${Math.floor(m / 60)} hr ${m % 60} min` : `${m / 60} hr`;
 }
 
+// Compact: "1h 31m", "33m".
+export function shortDuration(mins: number): string {
+  const m = Math.max(0, Math.round(mins));
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}`;
+}
+
+// Time saved vs the bus, rounded to 5 min (traffic makes the exact minute a guess): "1 hr", "45 min".
+export function prettySaved(mins: number): string {
+  return prettyDuration(Math.round(mins / 5) * 5);
+}
+
 // "08:25" + 27 → "08:52"
 export function addMinutes(t: string, mins: number): string {
   return fromMinutes(toMinutes(t) + mins);
