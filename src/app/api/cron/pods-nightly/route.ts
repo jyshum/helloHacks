@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notify";
 import { addDays, arriveOn, prettyTime, vancouverNow, weekdayOf, fromMinutes } from "@/lib/pods/time";
 import { getOrCreateTrip } from "@/lib/pods/trips";
+import { closePod, PAUSE_HOLD_DAYS } from "@/lib/pods/match";
 import type { Weekday } from "@/lib/pods/types";
 
 export const dynamic = "force-dynamic";
@@ -37,5 +38,12 @@ export async function GET(req: Request) {
     });
     asked++;
   }
-  return NextResponse.json({ ok: true, date: tomorrow, asked });
+  // Paused pods hold riders' spots for PAUSE_HOLD_DAYS, then close so riders get re-matched.
+  const cutoff = new Date(Date.now() - PAUSE_HOLD_DAYS * 86400000).toISOString();
+  const { data: stale } = await admin.from("pods").select("id").eq("status", "paused").lt("paused_at", cutoff);
+  for (const p of stale ?? []) {
+    await closePod(p.id, `The pod was paused for ${PAUSE_HOLD_DAYS} days, so it has closed. We're finding everyone a new pod.`);
+  }
+
+  return NextResponse.json({ ok: true, date: tomorrow, asked, closedPaused: stale?.length ?? 0 });
 }

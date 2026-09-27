@@ -15,6 +15,8 @@ export type NoticeKind =
   | "driver_late" // (riders) driver hasn't left yet
   | "driver_missed" // (riders) looks like driver isn't coming
   | "ride_paid" // (driver) a rider's payment landed in your wallet
+  | "pod_paused" // (riders) the driver paused driving; spots are held
+  | "pod_resumed" // (riders) the driver is driving again
   | "chat"; // new pod chat message
 
 export type Notice = {

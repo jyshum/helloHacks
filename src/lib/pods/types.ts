@@ -27,7 +27,8 @@ export interface Pod {
   campus_lat: number;
   campus_lng: number;
   campus_label: string;
-  status: "active" | "archived";
+  status: "active" | "paused" | "archived";
+  paused_at?: string | null; // set while the driver has paused driving
   created_at: string;
 }
 

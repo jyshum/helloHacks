@@ -11,6 +11,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const a = await podAccess(params.id);
   if (!a.ok) return jsonError(a.error, a.status);
   if (a.member?.status !== "active") return jsonError("You're not in this pod.", 403);
+  if (a.pod.status === "paused") return jsonError("This pod is paused. The driver needs to resume it first.", 409);
   const { action, date, leaveAt } = await req.json();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return jsonError("Invalid date.", 400);
   const driverOnly = ["confirm", "cancel", "start"].includes(action);

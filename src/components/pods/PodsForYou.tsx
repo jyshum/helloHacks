@@ -15,7 +15,7 @@ import type { PodCard } from "@/app/api/pods/options/route";
 const DAY = ["", "M", "T", "W", "T", "F"];
 const DAY_NAME = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
 
-export type MyPod = { podId: string; status: "active" | "requested"; days: number[]; campus: string; arriveBy: string | null; varies: boolean; driver: { id: string; full_name: string; photo_url: string | null } };
+export type MyPod = { podId: string; status: "active" | "requested" | "paused"; days: number[]; campus: string; arriveBy: string | null; varies: boolean; driver: { id: string; full_name: string; photo_url: string | null } };
 
 type Props = { me: MenuUser; area: string; arriveBy: string; myPods: MyPod[]; openDays: number[] };
 
@@ -79,6 +79,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                     {p.days.map((d) => DAY_NAME[d]).join(", ")}
                     {p.arriveBy && (p.varies ? ` · ${shortCampus(p.campus)} · times vary` : ` · ${shortCampus(p.campus)} by ${prettyTime(p.arriveBy)}`)}
                     {p.status === "requested" && " · Pending"}
+                    {p.status === "paused" && " · Paused by driver"}
                   </span>
                 </span>
                 <ChevronRight size={18} className="text-muted" aria-hidden />
@@ -94,6 +95,9 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
           <p className="mt-2 text-muted">
             {myPods.length ? openDays.map((d) => DAY_NAME[d]).join(", ") : <>{area} <span className="mx-1 text-muted/50">→</span> UBC · {prettyTime(arriveBy)}</>}
           </p>
+          <Link href="/people?role=driver" className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-blue">
+            <Search size={14} aria-hidden /> Search all drivers
+          </Link>
         </>
       )}
 

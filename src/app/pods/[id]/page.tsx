@@ -11,6 +11,6 @@ export default async function PodPage({ params }: { params: { id: string } }) {
   const view = await loadPodView(params.id, me.id);
   if (!view) notFound();
   // Not part of this pod (or no longer): go back to the pods home.
-  if (!view.me || ["declined", "left"].includes(view.me.status) || view.pod.status !== "active") redirect("/pods");
+  if (!view.me || ["declined", "left"].includes(view.me.status) || view.pod.status === "archived") redirect("/pods");
   return <PodScreen view={view} me={menuUserFor(me)} meFaculty={me.faculty} meYear={me.year} />;
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, Pencil, Plus, Timer, X, Zap } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, CirclePause, Pencil, Play, Plus, Search, Timer, X, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
@@ -138,6 +138,27 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
       <main className="glass relative z-10 mx-auto -mt-8 min-h-[64dvh] w-full max-w-app rounded-t-[32px] border-b-0 bg-white/65 px-5 pb-14 pt-6">
         {error && <p className="mb-4 rounded-2xl bg-red-50/80 px-4 py-3 text-sm text-red-700">{error}</p>}
 
+        {view.paused && inPod && (
+          <div className="rise mb-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+            <p className="flex items-center gap-2 font-semibold text-ink">
+              <CirclePause size={18} className="text-amber-700" aria-hidden />
+              {isDriver ? "You paused driving" : `${driverName} paused driving`}
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              {isDriver
+                ? `Your riders keep their spots until ${view.paused.until}. No trips run until you resume.`
+                : `Your spot is held until ${view.paused.until}. You can join a backup pod in the meantime.`}
+            </p>
+            {isDriver ? (
+              <button onClick={() => call(`/api/pods/${pod.id}/pause`, undefined, "DELETE")} disabled={!!busy} className="btn-ubc mt-3 w-full gap-2">
+                <Play size={16} aria-hidden /> Resume driving
+              </button>
+            ) : (
+              <Link href="/pods" className="btn-ghost mt-3 w-full">Find a backup pod</Link>
+            )}
+          </div>
+        )}
+
         {!isDriver && mine.status === "invited" && (
           <InviteCard
             view={view}
@@ -222,7 +243,12 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
               </div>
             )}
 
-            {isDriver && view.seatsLeft > 0 && <RidersForYou podId={pod.id} seatsLeft={view.seatsLeft} />}
+            {isDriver && !view.paused && view.seatsLeft > 0 && <RidersForYou podId={pod.id} seatsLeft={view.seatsLeft} />}
+            {isDriver && !view.paused && (
+              <Link href="/people?role=rider" className="mt-3 flex items-center justify-center gap-1.5 text-sm font-semibold text-blue">
+                <Search size={14} aria-hidden /> Search all riders
+              </Link>
+            )}
 
             <Link href={`/pods/${pod.id}/chat`} className="card mt-4 flex items-center gap-3 p-4">
               <span className="row-icon"><MessageCircle size={18} aria-hidden /></span>
@@ -246,15 +272,29 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
               <Link href="/map" className="flex items-center gap-1.5 font-semibold text-blue">
                 <Zap size={14} aria-hidden /> Ride today
               </Link>
+              {isDriver && !view.paused && (
+                <button
+                  onClick={() => {
+                    if (confirm(`Pause driving? Your riders keep their spots for 7 days while you're away, and you can resume any time.`)) call(`/api/pods/${pod.id}/pause`);
+                  }}
+                  disabled={!!busy}
+                  className="font-semibold text-muted"
+                >
+                  Pause driving
+                </button>
+              )}
               <button
                 onClick={async () => {
-                  if (!confirm(isDriver ? "Stop driving this pod?" : "Leave this pod?")) return;
+                  const msg = isDriver
+                    ? "Close this pod for good? Everyone leaves and riders get matched into other pods. This can't be undone."
+                    : "Leave this pod?";
+                  if (!confirm(msg)) return;
                   const r = await call(`/api/pods/${pod.id}/leave`);
                   if (r) router.push("/pods");
                 }}
                 className="font-semibold text-muted"
               >
-                {isDriver ? "Stop driving" : "Leave pod"}
+                {isDriver ? "Close pod" : "Leave pod"}
               </button>
             </div>
           </div>

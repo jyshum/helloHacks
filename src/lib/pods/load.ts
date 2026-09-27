@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { nearestArea } from "@/lib/areas";
 import { publicRouteStart } from "@/lib/pods/route";
+import { holdUntil } from "@/lib/pods/match";
 import { arriveOn, nextDateOn, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
 import type { CommuteProfile, Pod, PodMember, PodTrip, Weekday } from "@/lib/pods/types";
 import type { User, Vehicle } from "@/lib/types";
@@ -37,6 +38,7 @@ export type PodView = {
   seatsLeft: number;
   reliability: { completed: number; missed: number };
   nextTrip: TripView | null;
+  paused: { since: string; until: string } | null; // driver paused driving; spots held until `until`
 };
 
 const USER_COLS = "id, full_name, photo_url, faculty, year, rating_avg, rating_count, license_verified";
@@ -104,8 +106,9 @@ export async function loadPodView(podId: string, meUserId: string): Promise<PodV
     invited,
     seatsLeft: dp.seats - riders.length - requests.length - invited.length,
     reliability,
-    // Riders only ride on their own days in this pod.
-    nextTrip: await loadNextTrip(podId, dp, me && me.role === "rider" && me.days.length ? (me.days as Weekday[]) : undefined),
+    // Riders only ride on their own days in this pod. Paused pods have no upcoming trip.
+    nextTrip: pod.status === "paused" ? null : await loadNextTrip(podId, dp, me && me.role === "rider" && me.days.length ? (me.days as Weekday[]) : undefined),
+    paused: pod.status === "paused" && pod.paused_at ? { since: pod.paused_at, until: holdUntil(pod.paused_at) } : null,
   };
 }
 
@@ -146,9 +149,11 @@ export async function myPodId(userId: string): Promise<string | null> {
     .select("pod_id, status, pod:pods!inner(status)")
     .eq("user_id", userId)
     .in("status", ["active", "requested", "invited"])
-    .eq("pod.status", "active");
+    .in("pod.status", ["active", "paused"]);
   const rank = { active: 0, requested: 1, invited: 2 } as Record<string, number>;
-  const best = (data ?? []).sort((a, b) => rank[a.status] - rank[b.status])[0];
+  // Running pods first; a paused pod still counts as yours until it closes.
+  const paused = (m: { pod: unknown }) => ((m.pod as { status: string }).status === "paused" ? 1 : 0);
+  const best = (data ?? []).sort((a, b) => paused(a) - paused(b) || rank[a.status] - rank[b.status])[0];
   return best?.pod_id ?? null;
 }
 

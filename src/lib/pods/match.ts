@@ -129,6 +129,17 @@ async function loadProfiles(filter: { mode?: "driver" | "rider"; userIds?: strin
   return (data ?? []) as Profile[];
 }
 
+// Real people have a login; seeded demo users don't (auth_id is null).
+async function isRealUser(userId: string): Promise<boolean> {
+  const { data } = await createAdminClient().from("users").select("auth_id").eq("id", userId).maybeSingle();
+  return !!data?.auth_id;
+}
+async function realUserIds(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const { data } = await createAdminClient().from("users").select("id").in("id", ids).not("auth_id", "is", null);
+  return new Set((data ?? []).map((u) => u.id));
+}
+
 async function loadUsers(ids: string[]): Promise<Map<string, UserLite>> {
   if (!ids.length) return new Map();
   const { data } = await createAdminClient().from("users").select("id, full_name, faculty, year").in("id", ids);
@@ -243,7 +254,13 @@ export async function fillDriverPod(driverId: string): Promise<number> {
 
   const route = await ensureRoute(d);
   const busy = await busyRiderIds();
-  const riders = (await loadProfiles({ mode: "rider" })).filter((r) => !busy.has(r.user_id));
+  let riders = (await loadProfiles({ mode: "rider" })).filter((r) => !busy.has(r.user_id));
+  // A real driver's pod is never auto-filled with demo riders: they show up in
+  // "Riders for you" and search instead, and the driver chooses. Demo pods still fill.
+  if (await isRealUser(d.user_id)) {
+    const real = await realUserIds(riders.map((r) => r.user_id));
+    riders = riders.filter((r) => real.has(r.user_id));
+  }
   // Local prefilter, then full checks on the most promising few.
   const promising = riders
     .map((r) => ({ r, q: quickFit(d, r, route.path) }))
@@ -481,27 +498,171 @@ export async function addRider(driverId: string, riderId: string): Promise<{ sta
   return { status: await invite(podId, d, r, fit) };
 }
 
+// --- Directory: quick fit between you and anyone you search up ---------------------
+
+export type QuickMatch = { fits: boolean; days: Weekday[]; note: string };
+
+// Cheap fit for the "Find commuters" directory: same checks as the engine's first pass
+// (campus, days on time, distance to the driver's saved route), with no Google calls.
+// The real check still runs when someone taps Invite or Request to join.
+export async function directoryFits(viewerId: string, otherIds: string[]): Promise<Map<string, QuickMatch>> {
+  const out = new Map<string, QuickMatch>();
+  const [me] = await loadProfiles({ userIds: [viewerId] });
+  if (!me || !otherIds.length) return out;
+  const pathOf = (p: Profile) => (p.route_polyline ? decodePolyline(p.route_polyline) : [home(p), campus(p)]);
+  const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
+
+  for (const o of await loadProfiles({ userIds: otherIds })) {
+    if (o.mode === me.mode) {
+      out.set(o.user_id, { fits: false, days: [], note: o.mode === "driver" ? "Also drives" : "Also rides" });
+      continue;
+    }
+    const d = me.mode === "driver" ? me : o;
+    const r = me.mode === "driver" ? o : me;
+    const q = quickFit(d, r, pathOf(d));
+    if (q) {
+      const days = q.days.length === 5 ? "Mon–Fri" : q.days.map((x) => DAY[x]).join(", ");
+      if (q.near.km <= ON_ROUTE_KM) {
+        out.set(o.user_id, { fits: true, days: q.days, note: `Fits · ${days} · on the route` });
+        continue;
+      }
+      // Off the route: estimate the detour (there and back, ~1.3x road factor, 35 km/h).
+      const detour = Math.round(((q.near.km * 2 * 1.3) / 35) * 60);
+      if (detour <= MAX_DETOUR_MINUTES) {
+        out.set(o.user_id, { fits: true, days: q.days, note: `Likely fit · ${days} · ~${detour} min detour` });
+        continue;
+      }
+      out.set(o.user_id, { fits: false, days: [], note: `~${detour} min detour (max ${MAX_DETOUR_MINUTES})` });
+      continue;
+    }
+    let note = "Doesn't fit";
+    if (haversineKm(campus(d), campus(r)) > 2) note = "Different end of campus";
+    else if (!d.days.some((x) => r.days.includes(x))) note = "No days in common";
+    else if (!sharedDays(d, r).days.length) note = "Times don't line up";
+    else note = `${closestPointOnPath(home(r), pathOf(d)).km.toFixed(1)} km off the route`;
+    out.set(o.user_id, { fits: false, days: [], note });
+  }
+  return out;
+}
+
+// --- Pausing and closing a pod ----------------------------------------------------
+
+export const PAUSE_HOLD_DAYS = 7; // a paused pod keeps riders' spots this long, then closes
+
+// The driver's current pod, whether running or paused.
+export async function driverPod(driverId: string): Promise<{ id: string; status: "active" | "paused"; paused_at: string | null } | null> {
+  // select("*") so this still works before the pause migration adds paused_at.
+  const { data } = await createAdminClient()
+    .from("pods")
+    .select("*")
+    .eq("driver_id", driverId)
+    .in("status", ["active", "paused"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? { id: data.id, status: data.status, paused_at: data.paused_at ?? null } : null;
+}
+
+// Close a pod for good: everyone leaves, riders are told and re-matched elsewhere.
+export async function closePod(podId: string, reason = "The driver stopped driving, so this pod has closed."): Promise<void> {
+  const admin = createAdminClient();
+  const { data: riders } = await admin.from("pod_members").select("user_id").eq("pod_id", podId).eq("role", "rider").in("status", ["invited", "requested", "active"]);
+  await admin.from("pods").update({ status: "archived" }).eq("id", podId);
+  await admin.from("pod_members").update({ status: "left", updated_at: new Date().toISOString() }).eq("pod_id", podId);
+  await postSystemMessage(podId, reason);
+  const ids = (riders ?? []).map((m) => m.user_id);
+  await notify(ids, { kind: "trip_cancelled", title: "Your pod closed", body: "Your driver stopped driving. We're finding you a new pod.", url: "/pods" });
+  for (const id of ids) await matchRider(id);
+}
+
+// Driver takes a break: the pod and its riders stay together, but no trips run and the
+// driver drops out of matching until they resume (or it closes after PAUSE_HOLD_DAYS).
+export async function pausePod(driverId: string): Promise<{ podId: string } | { error: string }> {
+  const admin = createAdminClient();
+  const pod = await driverPod(driverId);
+  if (!pod) return { error: "You don't have a pod to pause." };
+  if (pod.status === "paused") return { podId: pod.id };
+  const now = new Date().toISOString();
+  // Nothing else changes unless the pod really paused (needs migration 20261003000000_pod_pause).
+  const { error } = await admin.from("pods").update({ status: "paused", paused_at: now }).eq("id", pod.id);
+  if (error) return { error: "Pausing isn't set up in the database yet." };
+  await admin.from("commute_profiles").update({ active: false }).eq("user_id", driverId);
+  // Open invites point at a pod that isn't running; withdraw them.
+  await admin.from("pod_members").delete().eq("pod_id", pod.id).eq("status", "invited");
+
+  const [{ data: u }, { data: riders }] = await Promise.all([
+    admin.from("users").select("full_name").eq("id", driverId).single(),
+    admin.from("pod_members").select("user_id").eq("pod_id", pod.id).eq("role", "rider").in("status", ["active", "requested"]),
+  ]);
+  const first = (u?.full_name ?? "Your driver").split(" ")[0];
+  const until = holdUntil(now);
+  await postSystemMessage(pod.id, `${first} paused driving. Everyone's spot is held until ${until}.`);
+  await notify((riders ?? []).map((r) => r.user_id), {
+    kind: "pod_paused",
+    title: `${first} paused driving`,
+    body: `Your spot is held until ${until}. You can find a backup pod in the meantime.`,
+    url: `/pods/${pod.id}`,
+  });
+  return { podId: pod.id };
+}
+
+// Driver is back: same pod, same riders. Riders who found another pod for the same days
+// in the meantime are released from this one so nobody is double-booked.
+export async function resumePod(driverId: string): Promise<{ podId: string } | { error: string }> {
+  const admin = createAdminClient();
+  const pod = await driverPod(driverId);
+  if (!pod) return { error: "You don't have a paused pod." };
+  await admin.from("commute_profiles").update({ active: true }).eq("user_id", driverId);
+  if (pod.status === "active") return { podId: pod.id };
+
+  // Check riders against their OTHER pods while this one still counts as paused
+  // (coveredDays only looks at active pods).
+  const { data: riders } = await admin.from("pod_members").select("id, user_id, days, user:users!pod_members_user_id_fkey(full_name)").eq("pod_id", pod.id).eq("role", "rider").in("status", ["active", "requested"]);
+  const movedIds = new Set<string>();
+  for (const r of riders ?? []) {
+    const elsewhere = await coveredDays(r.user_id);
+    if ((r.days as number[]).every((d) => elsewhere.days.has(d))) movedIds.add(r.id);
+  }
+  const { error } = await admin.from("pods").update({ status: "active", paused_at: null }).eq("id", pod.id);
+  if (error) return { error: error.message };
+
+  const staying: string[] = [];
+  for (const r of riders ?? []) {
+    if (movedIds.has(r.id)) {
+      await admin.from("pod_members").update({ status: "left", updated_at: new Date().toISOString() }).eq("id", r.id);
+      const name = (r.user as unknown as { full_name: string } | null)?.full_name ?? "A rider";
+      await postSystemMessage(pod.id, `${name.split(" ")[0]} moved to another pod while this one was paused.`);
+    } else staying.push(r.user_id);
+  }
+
+  const { data: u } = await admin.from("users").select("full_name").eq("id", driverId).single();
+  const first = (u?.full_name ?? "Your driver").split(" ")[0];
+  await postSystemMessage(pod.id, `${first} is driving again.`);
+  await notify(staying, { kind: "pod_resumed", title: `${first} is driving again`, body: "Your pod is back on. Same pickup, same time.", url: `/pods/${pod.id}` });
+  return { podId: pod.id };
+}
+
+export function holdUntil(pausedAt: string): string {
+  const d = new Date(new Date(pausedAt).getTime() + PAUSE_HOLD_DAYS * 86400000);
+  return d.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", timeZone: "America/Vancouver" });
+}
+
 // Run after someone saves their commute. Keeps pods consistent with the new answers.
 export async function rematchUser(userId: string): Promise<void> {
   const admin = createAdminClient();
   const [p] = await loadProfiles({ userIds: [userId] });
 
-  // Switched away from driving (or paused): close their pod and release riders.
+  // Switched away from driving (or stopped for good): close their pod and release riders.
   if (!p || p.mode !== "driver") {
-    const { data: pod } = await admin.from("pods").select("id").eq("driver_id", userId).eq("status", "active").maybeSingle();
-    if (pod) {
-      const { data: riders } = await admin.from("pod_members").select("user_id").eq("pod_id", pod.id).eq("role", "rider").in("status", ["invited", "requested", "active"]);
-      await admin.from("pods").update({ status: "archived" }).eq("id", pod.id);
-      await admin.from("pod_members").update({ status: "left", updated_at: new Date().toISOString() }).eq("pod_id", pod.id);
-      await postSystemMessage(pod.id, "The driver stopped driving, so this pod has closed.");
-      const ids = (riders ?? []).map((m) => m.user_id);
-      await notify(ids, { kind: "trip_cancelled", title: "Your pod closed", body: "Your driver stopped driving. We're finding you a new pod.", url: "/pods" });
-      for (const id of ids) await matchRider(id);
-    }
+    const pod = await driverPod(userId);
+    if (pod) await closePod(pod.id);
   }
   if (!p) return;
 
   if (p.mode === "driver") {
+    // Saving the commute as a driver again brings a paused pod back instead of starting a new one.
+    const pod = await driverPod(userId);
+    if (pod?.status === "paused") await resumePod(userId);
     await fillDriverPod(userId);
   } else {
     // A rider who changed schedule/home loses a pending invite (it may no longer fit).
