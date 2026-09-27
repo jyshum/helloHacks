@@ -222,6 +222,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
         <div className="mt-4 rounded-2xl bg-paper p-4 text-sm">
           <p className="flex gap-3"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-ink" /><span className="text-ink">{request.pickup_label}</span></p>
           <p className="mt-2 flex gap-3"><span className="mt-1.5 h-2 w-2 shrink-0 bg-ink" /><span className="text-ink">{request.dropoff_label}</span></p>
+          {request.estimated_cost_cents != null && (
           <button onClick={() => setShowCost((s) => !s)} className="mt-3 flex w-full items-center justify-between border-t border-line pt-3">
             <span className="text-muted">Gas contribution</span>
             <span className="flex items-center gap-1 font-heading font-bold text-ink">
@@ -229,8 +230,9 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
               {showCost ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
             </span>
           </button>
+          )}
         </div>
-        {showCost && (
+        {showCost && request.estimated_cost_cents != null && (
           <div className="mt-2">
             <GasBreakdown detourKm={Number(request.detour_km ?? 0)} totalCents={request.estimated_cost_cents ?? 0} />
           </div>

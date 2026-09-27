@@ -26,5 +26,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (status === "completed") {
     await admin.from("ride_requests").update({ status: "completed" }).eq("ride_id", params.id).eq("status", "accepted");
   }
+  // Keep a pod's daily trip in sync with its ride.
+  if (status === "completed" || status === "cancelled") {
+    await admin.from("pod_trips").update({ status }).eq("ride_id", params.id);
+  }
   return NextResponse.json({ ok: true });
 }
