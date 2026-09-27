@@ -1,10 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/server";
-import { driverShareOf } from "@/lib/pricing";
+import { driverShareOf, formatCents } from "@/lib/pricing";
+import { postSystemMessage } from "@/lib/pods/chat";
+import { notify } from "@/lib/notify";
+import { DEMO_BANK, DEMO_CARD } from "@/lib/demoMoney";
+
+export { DEMO_BANK, DEMO_CARD };
 
 // Demo wallet. All money here is fake, but it moves exactly like the real thing would:
-// every ride charges the rider and pays the driver, once, from a ledger.
+// every pod ride charges the rider and pays the driver, once, from a ledger.
 export const WELCOME_CENTS = 2000;
-export const DEMO_CARD = "Visa •••• 4242";
+export const TOPUP_STEP_CENTS = 2000; // auto top-ups come in $20 steps
 
 export type WalletEntry = {
   id: string;
@@ -15,7 +20,17 @@ export type WalletEntry = {
   other: { id: string; full_name: string; photo_url: string | null } | null;
 };
 
-// Balance + history. New wallets start with a little demo money.
+const UNIQUE_VIOLATION = "23505";
+
+// Adds one wallet row guarded by a one-time key. A repeat of the same key (double tap, retry)
+// is rejected by the database's unique index and treated as "already done".
+export async function addEntry(row: { user_id: string; amount_cents: number; kind: WalletEntry["kind"]; label: string; idem_key: string }) {
+  const { error } = await createAdminClient().from("wallet_entries").insert(row);
+  if (error && error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
+  return { duplicate: !!error };
+}
+
+// Balance + history. New wallets start with a little demo money (once, keyed per user).
 export async function loadWallet(userId: string): Promise<{ balance: number; entries: WalletEntry[] }> {
   const admin = createAdminClient();
   const read = () =>
@@ -27,7 +42,7 @@ export async function loadWallet(userId: string): Promise<{ balance: number; ent
       .limit(200);
   let { data } = await read();
   if (!data?.length) {
-    await admin.from("wallet_entries").insert({ user_id: userId, amount_cents: WELCOME_CENTS, kind: "welcome", label: "Welcome credit" });
+    await addEntry({ user_id: userId, amount_cents: WELCOME_CENTS, kind: "welcome", label: "Welcome credit", idem_key: `welcome:${userId}` });
     ({ data } = await read());
   }
   const entries = (data ?? []) as unknown as WalletEntry[];
@@ -39,22 +54,39 @@ export async function balanceOf(userId: string): Promise<number> {
   return (data ?? []).reduce((s, e) => s + e.amount_cents, 0);
 }
 
-// Rider pays the full price; the driver gets the driver fee + gas (company fee and tax stay with hoppedIn).
-// Safe to call more than once: the ledger's unique index (request_id, kind) means a ride is only charged once.
+// Pays for one ride when it ends. Pod rides only for now (on-demand rides are deferred).
+// The money moves inside the database (settle_ride): locked, all-or-nothing, charged at most once.
 export async function settleRequest(requestId: string): Promise<void> {
   const admin = createAdminClient();
   const { data: rr } = await admin
     .from("ride_requests")
-    .select("id, rider_id, estimated_cost_cents, dropoff_label, ride:rides(driver_id)")
+    .select("ride_id, estimated_cost_cents, rider:users!ride_requests_rider_id_fkey(full_name), ride:rides(driver_id, driver:users!rides_driver_id_fkey(full_name))")
     .eq("id", requestId)
     .maybeSingle();
-  const driverId = (rr?.ride as unknown as { driver_id: string } | null)?.driver_id;
   const cents = rr?.estimated_cost_cents ?? 0;
-  if (!rr || !driverId || cents <= 0) return;
-  const { data: done } = await admin.from("wallet_entries").select("id").eq("request_id", requestId).limit(1);
-  if (done?.length) return;
-  await admin.from("wallet_entries").insert([
-    { user_id: rr.rider_id, amount_cents: -cents, kind: "ride", request_id: requestId, other_user_id: driverId, label: `Ride to ${rr.dropoff_label ?? "campus"}` },
-    { user_id: driverId, amount_cents: driverShareOf(cents), kind: "earning", request_id: requestId, other_user_id: rr.rider_id, label: "Driver fee + gas" },
-  ]);
+  if (!rr || cents <= 0) return;
+  const { data: trip } = await admin.from("pod_trips").select("pod_id").eq("ride_id", rr.ride_id).maybeSingle();
+  if (!trip) return;
+
+  const { data, error } = await admin.rpc("settle_ride", {
+    p_request: requestId,
+    p_driver_share: driverShareOf(cents),
+    p_topup_step: TOPUP_STEP_CENTS,
+    p_card: DEMO_CARD,
+  });
+  if (error) return console.error("[wallet] settle failed:", error.message);
+  const result = (data as { charged: boolean }[] | null)?.[0];
+  if (!result?.charged) return; // already paid
+
+  // Receipt: a line in the pod chat, and a nudge to the driver.
+  const ride = rr.ride as unknown as { driver_id: string; driver: { full_name: string } | null };
+  const riderFirst = ((rr.rider as unknown as { full_name: string } | null)?.full_name ?? "A rider").split(" ")[0];
+  const driverFirst = (ride.driver?.full_name ?? "the driver").split(" ")[0];
+  await postSystemMessage(trip.pod_id, `${riderFirst} paid ${driverFirst} ${formatCents(cents)} for today's ride.`);
+  await notify([ride.driver_id], {
+    kind: "ride_paid",
+    title: `${riderFirst} paid you ${formatCents(driverShareOf(cents))}`,
+    body: "Driver fee + gas, in your wallet now.",
+    url: "/wallet",
+  });
 }

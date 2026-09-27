@@ -14,6 +14,7 @@ export type NoticeKind =
   | "trip_cancelled" // (riders) driver can't drive
   | "driver_late" // (riders) driver hasn't left yet
   | "driver_missed" // (riders) looks like driver isn't coming
+  | "ride_paid" // (driver) a rider's payment landed in your wallet
   | "chat"; // new pod chat message
 
 export type Notice = {
@@ -25,6 +26,8 @@ export type Notice = {
 
 // Time-sensitive notices skip the push service's low-power batching.
 const URGENT: NoticeKind[] = ["driver_late", "driver_missed", "trip_cancelled"];
+// Frequent notices that would be too noisy as email (push only).
+const QUIET: NoticeKind[] = ["chat", "ride_paid"];
 const SEND_TIMEOUT_MS = 5000;
 
 let vapidReady: boolean | null = null;
@@ -55,8 +58,8 @@ export async function notify(userIds: string[], notice: Notice): Promise<void> {
     const ids = (real ?? []).map((u) => u.id as string);
     if (!ids.length) return;
     const pushed = await sendPush(ids, notice);
-    // Email anyone the push didn't reach, except for chat (too noisy for email).
-    const emailTo = notice.kind === "chat" ? [] : ids.filter((id) => !pushed.has(id));
+    // Email anyone the push didn't reach, except for quiet kinds (too noisy for email).
+    const emailTo = QUIET.includes(notice.kind) ? [] : ids.filter((id) => !pushed.has(id));
     const emailed = emailTo.length ? await sendEmail(emailTo, notice) : 0;
     console.log(`[notify] ${notice.kind} → ${ids.length} user(s), push ${pushed.size}, email ${emailed}: ${notice.title}`);
   } catch (e) {

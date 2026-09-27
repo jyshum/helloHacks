@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Star } from "lucide-react";
 import Avatar from "@/components/Avatar";
@@ -15,6 +16,15 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Pod rides are paid from the wallet when they end; show the new balance as a receipt.
+  const [balance, setBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!trip.podId) return;
+    fetch("/api/wallet", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b) => b && setBalance(b.balance))
+      .catch(() => {});
+  }, [trip.podId]);
 
   async function submit() {
     setBusy(true);
@@ -45,8 +55,9 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
         <p className="mt-1 text-muted">{request.pickup_label} → {request.dropoff_label}</p>
       </div>
 
-      {request.estimated_cost_cents != null && (
-      <div className="card mt-6 flex items-center justify-between p-5">
+      {trip.podId && request.estimated_cost_cents != null && (
+      <div className="card mt-6 p-5">
+      <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted">{viewer === "rider" ? "Ride price" : "You earned"}</p>
           <p className="font-heading text-3xl font-bold text-ubc">{formatCents(cents)}</p>
@@ -55,6 +66,11 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
           <Check size={14} strokeWidth={2.5} aria-hidden />
           {viewer === "rider" ? "Paid" : "Received"}
         </span>
+      </div>
+      <Link href="/wallet" className="mt-3 flex items-center justify-between border-t border-ink/5 pt-3 text-sm">
+        <span className="text-muted">{viewer === "rider" ? "From your wallet" : "Added to your wallet"}</span>
+        <span className="font-semibold text-blue">{balance != null ? `Balance ${formatCents(balance)}` : "Wallet"}</span>
+      </Link>
       </div>
       )}
 

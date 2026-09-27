@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Check, CreditCard, Gift, Landmark, Plus } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, CreditCard, Gift, Landmark, LoaderCircle, Lock, Plus } from "lucide-react";
 import BackButton from "@/components/app/BackButton";
 import Avatar from "@/components/Avatar";
 import { formatCents } from "@/lib/pricing";
 import type { WalletEntry } from "@/lib/wallet";
+import { DEMO_BANK, DEMO_CARD } from "@/lib/demoMoney";
 
 const AMOUNTS = [1000, 2000, 5000];
 type Sheet = null | "add" | "cashout";
@@ -18,11 +19,14 @@ export default function WalletView({ initial }: { initial: { balance: number; en
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One key per sheet: a double tap or retry sends the same key and the database adds it once.
+  const [key, setKey] = useState("");
 
   function open(s: Sheet) {
     setDone(null);
     setError(null);
     setClosing(false);
+    setKey(crypto.randomUUID());
     setSheet(s);
   }
   function close() {
@@ -38,20 +42,25 @@ export default function WalletView({ initial }: { initial: { balance: number; en
   async function submit() {
     setBusy(true);
     setError(null);
-    const res = await fetch(sheet === "add" ? "/api/wallet/topup" : "/api/wallet/cashout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: sheet === "add" ? JSON.stringify({ cents: amount }) : undefined,
-    });
+    // A short pause so the demo feels like a real card payment.
+    const [res] = await Promise.all([
+      fetch(sheet === "add" ? "/api/wallet/topup" : "/api/wallet/cashout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sheet === "add" ? { cents: amount, key } : { key }),
+      }),
+      new Promise((r) => setTimeout(r, 1200)),
+    ]);
     const body = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok) return setError(body.error ?? "Something went wrong.");
-    setDone(sheet === "add" ? `${formatCents(amount)} added` : `${formatCents(body.cents)} sent`);
+    if (!res.ok) {
+      setBusy(false);
+      return setError(body.error ?? "Something went wrong.");
+    }
     await refresh();
-    setTimeout(close, 900);
+    setBusy(false);
+    setDone(sheet === "add" ? `${formatCents(amount)} added` : `${formatCents(body.cents)} sent`);
+    setTimeout(close, 1400);
   }
-
-  const negative = wallet.balance < 0;
 
   return (
     <main className="screen pb-16">
@@ -66,8 +75,8 @@ export default function WalletView({ initial }: { initial: { balance: number; en
           <p className="text-sm text-white/70">Balance</p>
           <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/90">Demo money</span>
         </div>
-        <p className={`mt-2 text-5xl font-bold tracking-tight ${negative ? "text-red-200" : ""}`}>{formatCents(wallet.balance)}</p>
-        <p className="mt-1 text-sm text-white/70">{negative ? "Add money to keep riding" : "Rides pay automatically when you arrive"}</p>
+        <p className="mt-2 text-5xl font-bold tracking-tight">{formatCents(wallet.balance)}</p>
+        <p className="mt-1 text-sm text-white/70">Rides pay automatically when you arrive</p>
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button onClick={() => open("add")} className="flex items-center justify-center gap-2 rounded-full bg-white py-3 font-semibold text-ubc transition active:scale-[0.97]">
             <Plus size={18} aria-hidden /> Add money
@@ -105,7 +114,8 @@ export default function WalletView({ initial }: { initial: { balance: number; en
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green text-white">
                   <Check size={30} strokeWidth={2.5} aria-hidden />
                 </div>
-                <p className="mt-4 text-xl font-bold text-ink">{done}</p>
+                <p className="mt-4 text-2xl font-bold text-ink">{done}</p>
+                <p className="mt-1 text-sm text-muted">New balance {formatCents(wallet.balance)}</p>
               </div>
             ) : sheet === "add" ? (
               <>
@@ -122,14 +132,27 @@ export default function WalletView({ initial }: { initial: { balance: number; en
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-soft">
-                  <CreditCard size={20} className="text-muted" aria-hidden />
-                  <span className="flex-1 font-medium text-ink">Visa •••• 4242</span>
-                  <span className="text-xs font-semibold text-muted">Demo card</span>
+                <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-soft">
+                  <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg bg-ubc text-white">
+                    <CreditCard size={20} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-ink">{DEMO_CARD}</span>
+                    <span className="block text-xs text-muted">Test mode · no real money moves</span>
+                  </span>
+                  <span className="rounded-full bg-frost px-2 py-0.5 text-[11px] font-semibold text-blue">DEMO</span>
                 </div>
                 {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
-                <button onClick={submit} disabled={busy} className="btn-ubc mt-5 w-full py-4 text-lg">
-                  {busy ? "Adding…" : `Add ${formatCents(amount)}`}
+                <button onClick={submit} disabled={busy} className="btn-ubc mt-5 flex w-full items-center justify-center gap-2 py-4 text-lg">
+                  {busy ? (
+                    <>
+                      <LoaderCircle size={20} className="animate-spin" aria-hidden /> Processing…
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={17} aria-hidden /> Pay {formatCents(amount)}
+                    </>
+                  )}
                 </button>
               </>
             ) : (
@@ -137,12 +160,18 @@ export default function WalletView({ initial }: { initial: { balance: number; en
                 <p className="text-xl font-bold text-ink">Cash out</p>
                 <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-soft">
                   <Landmark size={20} className="text-muted" aria-hidden />
-                  <span className="flex-1 font-medium text-ink">Bank •••• 6789</span>
+                  <span className="flex-1 font-medium text-ink">{DEMO_BANK}</span>
                   <span className="text-xs font-semibold text-muted">Demo bank</span>
                 </div>
                 {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
-                <button onClick={submit} disabled={busy} className="btn-ubc mt-5 w-full py-4 text-lg">
-                  {busy ? "Sending…" : `Send ${formatCents(Math.max(0, wallet.balance))}`}
+                <button onClick={submit} disabled={busy} className="btn-ubc mt-5 flex w-full items-center justify-center gap-2 py-4 text-lg">
+                  {busy ? (
+                    <>
+                      <LoaderCircle size={20} className="animate-spin" aria-hidden /> Processing…
+                    </>
+                  ) : (
+                    `Send ${formatCents(Math.max(0, wallet.balance))}`
+                  )}
                 </button>
               </>
             )}
@@ -156,7 +185,14 @@ export default function WalletView({ initial }: { initial: { balance: number; en
 function Row({ e }: { e: WalletEntry }) {
   const inbound = e.amount_cents > 0;
   const when = new Date(e.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
-  const title = e.kind === "ride" && e.other ? `Ride with ${e.other.full_name.split(" ")[0]}` : e.kind === "earning" && e.other ? `${e.other.full_name.split(" ")[0]} paid you` : e.label ?? "";
+  const first = e.other?.full_name.split(" ")[0];
+  // Short title; the detail (card, bank, destination) goes on the line below.
+  const [title, detail] =
+    e.kind === "ride" ? [`Ride with ${first ?? "driver"}`, e.label] :
+    e.kind === "earning" ? [`${first ?? "A rider"} paid you`, e.label] :
+    e.kind === "topup" ? [e.label?.startsWith("Auto") ? "Auto top-up" : "Added money", DEMO_CARD] :
+    e.kind === "cashout" ? ["Cashed out", DEMO_BANK] :
+    [e.label ?? "Welcome credit", null];
   const Icon = e.kind === "welcome" ? Gift : e.kind === "topup" ? ArrowDownLeft : e.kind === "cashout" ? Landmark : ArrowUpRight;
   return (
     <div className="flex items-center gap-3 py-3.5">
@@ -171,7 +207,7 @@ function Row({ e }: { e: WalletEntry }) {
         <p className="truncate font-semibold text-ink">{title}</p>
         <p className="truncate text-[13px] text-muted">
           {when}
-          {e.kind === "ride" || e.kind === "earning" ? ` · ${e.label}` : ""}
+          {detail ? ` · ${detail}` : ""}
         </p>
       </div>
       <p className={`font-semibold ${inbound ? "text-green" : "text-ink"}`}>
