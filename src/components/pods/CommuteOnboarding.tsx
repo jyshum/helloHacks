@@ -89,7 +89,6 @@ export default function CommuteOnboarding({
           <Car size={32} className="relative text-ubc" aria-hidden />
         </span>
         <h1 className="mt-6 font-heading text-2xl font-bold text-ubc">Finding your pod…</h1>
-        <p className="mt-2 text-muted">Matching you with UBC students on your route and schedule.</p>
       </main>
     );
   }
@@ -97,7 +96,7 @@ export default function CommuteOnboarding({
   return (
     <main className="screen flex flex-col">
       <div className="flex items-center gap-3">
-        <button onClick={back} className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-soft" aria-label="Back">
+        <button onClick={back} className="glass flex h-10 w-10 items-center justify-center rounded-full" aria-label="Back">
           <ArrowLeft size={20} aria-hidden />
         </button>
         <div className="flex flex-1 gap-1.5">
@@ -109,9 +108,8 @@ export default function CommuteOnboarding({
 
       {step === "mode" && (
         <section className="mt-8 flex flex-1 flex-col">
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue">Hi {firstName}</p>
+          <p className="text-sm font-medium text-muted">Hi {firstName}</p>
           <h1 className="mt-1 font-heading text-3xl font-bold leading-tight text-ubc">How do you get to campus?</h1>
-          <p className="mt-2 text-muted">We&apos;ll match you into a pod that rides together every week.</p>
           <div className="mt-8 flex flex-col gap-3">
             <ModeCard
               selected={mode === "driver"}
@@ -121,7 +119,7 @@ export default function CommuteOnboarding({
               }}
               icon={<Car size={26} aria-hidden />}
               title="I drive"
-              text="Pick up students on your way. Never drive alone."
+              text="Pick up on your way"
               dark
             />
             <ModeCard
@@ -132,7 +130,7 @@ export default function CommuteOnboarding({
               }}
               icon={<User size={26} aria-hidden />}
               title="I need a ride"
-              text="Skip the transfers. Ride with the same people every week."
+              text="Skip the bus"
             />
           </div>
         </section>
@@ -140,8 +138,8 @@ export default function CommuteOnboarding({
 
       {step === "home" && (
         <section className="mt-8 flex flex-1 flex-col">
-          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">Where do you commute from?</h1>
-          <p className="mt-2 text-muted">Others only ever see your neighbourhood, never your address.</p>
+          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">Where&apos;s home?</h1>
+          <p className="mt-2 text-muted">Only your area is shown.</p>
           <HomePicker value={home} onChange={setHome} />
           <div className="mt-auto pt-6">
             <button disabled={!home} onClick={() => setStep("schedule")} className="btn-ubc w-full py-4">Continue</button>
@@ -151,14 +149,14 @@ export default function CommuteOnboarding({
 
       {step === "schedule" && (
         <section className="mt-8 flex flex-1 flex-col">
-          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">When do you need to be on campus?</h1>
-          <p className="mt-2 text-muted">Tick your campus days and when your first class starts each day.</p>
+          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">When do you arrive?</h1>
+          
 
           <div className="mt-6 flex flex-col gap-2">
             {DAYS.map((d) => {
               const on = days.includes(d);
               return (
-                <div key={d} className={`flex items-center gap-3 rounded-2xl p-2 pl-3 transition ${on ? "bg-white shadow-soft" : "bg-line/40"}`}>
+                <div key={d} className={`flex items-center gap-3 rounded-2xl p-2 pl-3 transition ${on ? "glass" : "bg-ink/[0.03]"}`}>
                   <button
                     onClick={() => setDays(on ? days.filter((x) => x !== d) : [...days, d].sort())}
                     className={`flex w-[92px] shrink-0 items-center gap-2 font-heading font-semibold ${on ? "text-ubc" : "text-muted"}`}
@@ -180,7 +178,7 @@ export default function CommuteOnboarding({
                       {TIMES.map((t) => <option key={t} value={t}>{pretty(t)}</option>)}
                     </select>
                   ) : (
-                    <span className="flex-1 py-2.5 text-sm text-muted">Not on campus</span>
+                    <span className="flex-1 py-2.5 text-sm text-muted/70">Off</span>
                   )}
                 </div>
               );
@@ -194,7 +192,7 @@ export default function CommuteOnboarding({
               }}
               className="mt-2 self-start text-sm font-semibold text-blue"
             >
-              Use {pretty(times[days[0]])} for every day
+              Same time every day
             </button>
           )}
 
@@ -210,7 +208,7 @@ export default function CommuteOnboarding({
               onClick={() => (mode === "driver" ? setStep("seats") : save())}
               className="btn-ubc w-full py-4"
             >
-              {mode === "driver" ? "Continue" : "Find my pod"}
+              {mode === "driver" ? "Continue" : "Find pods"}
             </button>
           </div>
         </section>
@@ -218,14 +216,14 @@ export default function CommuteOnboarding({
 
       {step === "seats" && (
         <section className="mt-8 flex flex-1 flex-col">
-          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">How many riders can you take?</h1>
-          <p className="mt-2 text-muted">You approve everyone before they join.</p>
+          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">How many seats?</h1>
+          
           <div className="mt-8 flex items-center justify-center gap-8">
-            <button onClick={() => setSeats(Math.max(1, seats - 1))} className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-soft" aria-label="Fewer seats">
+            <button onClick={() => setSeats(Math.max(1, seats - 1))} className="glass flex h-14 w-14 items-center justify-center rounded-full" aria-label="Fewer seats">
               <Minus size={22} aria-hidden />
             </button>
             <span className="w-16 text-center font-heading text-6xl font-bold text-ubc">{seats}</span>
-            <button onClick={() => setSeats(Math.min(6, seats + 1))} className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-soft" aria-label="More seats">
+            <button onClick={() => setSeats(Math.min(6, seats + 1))} className="glass flex h-14 w-14 items-center justify-center rounded-full" aria-label="More seats">
               <Plus size={22} aria-hidden />
             </button>
           </div>
@@ -233,14 +231,14 @@ export default function CommuteOnboarding({
           <Link href="/driver-verify" className="card mt-10 flex items-center gap-3 p-4">
             <ShieldCheck size={24} className={licenseVerified ? "text-green" : "text-blue"} aria-hidden />
             <span className="flex-1 text-sm">
-              <span className="block font-semibold text-ink">{licenseVerified ? "License verified" : "Verify your license & car"}</span>
-              <span className="block text-muted">{licenseVerified ? "Riders will see your badge." : "Riders trust verified drivers more. Takes 2 minutes."}</span>
+              <span className="block font-semibold text-ink">{licenseVerified ? "Verified" : "Get verified"}</span>
+              
             </span>
           </Link>
 
           {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
           <div className="mt-auto pt-6">
-            <button onClick={save} className="btn-ubc w-full py-4">Find my riders</button>
+            <button onClick={save} className="btn-ubc w-full py-4">Find riders</button>
           </div>
         </section>
       )}
@@ -253,7 +251,7 @@ function ModeCard({ selected, onClick, icon, title, text, dark }: { selected: bo
     <button
       onClick={onClick}
       className={`flex items-center gap-4 rounded-card p-5 text-left transition hover:-translate-y-0.5 ${
-        dark ? "bg-ubc text-white shadow-lift" : "border-2 border-sky bg-white shadow-soft"
+        dark ? "bg-ubc text-white shadow-glow" : "glass"
       } ${selected ? "ring-4 ring-sky/40" : ""}`}
     >
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${dark ? "bg-white/10" : "bg-sky/10 text-sky"}`}>{icon}</span>
@@ -316,17 +314,17 @@ function HomePicker({ value, onChange }: { value: Home | null; onChange: (h: Hom
           <span className="row-icon bg-ubc text-white"><MapPin size={18} aria-hidden /></span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold text-ink">{value.label}</span>
-            <span className="block text-sm text-muted">Shown to others as <b>{nearestArea(value)}</b></span>
+            <span className="block text-sm text-muted">Shown as <b>{nearestArea(value)}</b></span>
           </span>
           <Check size={20} className="text-green" aria-hidden />
         </div>
       )}
-      <div className="flex items-center gap-2 rounded-2xl bg-white px-4 shadow-soft">
+      <div className="glass flex items-center gap-2 rounded-2xl px-4">
         <Search size={18} className="text-muted" aria-hidden />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={value ? "Change address or postal code" : "Your address or postal code"}
+          placeholder={value ? "Change address" : "Address or postal code"}
           className="w-full bg-transparent py-4 outline-none"
         />
       </div>
@@ -344,7 +342,7 @@ function HomePicker({ value, onChange }: { value: Home | null; onChange: (h: Hom
         </div>
       )}
       <button onClick={gps} className="mt-3 flex items-center gap-2 font-semibold text-blue">
-        <LocateFixed size={18} aria-hidden /> {locating ? "Finding you…" : "Use my current location"}
+        <LocateFixed size={18} aria-hidden /> {locating ? "Locating…" : "Use my location"}
       </button>
     </div>
   );

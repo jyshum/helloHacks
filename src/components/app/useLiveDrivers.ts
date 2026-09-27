@@ -12,6 +12,7 @@ export type LiveDriver = {
   driverId: string;
   name: string;
   faculty: string | null;
+  photo: string | null;
   pos: LatLng;
   live: boolean; // true = real GPS from an open app, false = simulated along their route
   rideId: string | null;
@@ -23,7 +24,7 @@ const STEP = 0.012;
 // Everyone on the map: posted rides (animated along their route) merged with
 // real positions from anyone who has the app open.
 export function useLiveDrivers(
-  me: { id: string; role: Role; full_name: string },
+  me: { id: string; role: Role; full_name: string; photo_url?: string | null },
   myPos: LatLng | null,
   share: boolean // only online drivers broadcast their position
 ) {
@@ -88,6 +89,7 @@ export function useLiveDrivers(
           driverId: d.driverId,
           name: d.name,
           faculty: d.faculty,
+          photo: d.photo ?? live?.photo ?? null,
           pos: live ? { lat: live.lat, lng: live.lng } : pointAlong(path, t),
           live: !!live,
           rideId: d.id,
@@ -98,7 +100,7 @@ export function useLiveDrivers(
     online
       .filter((u) => (u.role === "driver" || u.role === "both") && !list.some((d) => d.driverId === u.user_id))
       .forEach((u) =>
-        list.push({ driverId: u.user_id, name: u.name, faculty: null, pos: { lat: u.lat, lng: u.lng }, live: true, rideId: null, path: null })
+        list.push({ driverId: u.user_id, name: u.name, faculty: null, photo: u.photo ?? null, pos: { lat: u.lat, lng: u.lng }, live: true, rideId: null, path: null })
       );
     return list;
   }, [rides, paths, online, tick, me.id]);

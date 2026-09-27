@@ -9,6 +9,7 @@ export type MapDriver = {
   driverId: string;
   name: string;
   faculty: string | null;
+  photo?: string | null;
   originLabel: string;
   destinationLabel: string;
   origin: LatLng;
@@ -22,6 +23,7 @@ export type MapRider = {
   riderId: string;
   name: string;
   faculty: string | null;
+  photo?: string | null;
   pickup: LatLng;
   pickupLabel: string;
 };

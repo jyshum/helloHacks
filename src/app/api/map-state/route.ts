@@ -15,14 +15,14 @@ export async function GET() {
   const [ridesRes, reqsRes] = await Promise.all([
     admin
       .from("rides")
-      .select("*, driver:users!rides_driver_id_fkey(id, full_name, faculty)")
+      .select("*, driver:users!rides_driver_id_fkey(id, full_name, faculty, photo_url)")
       .in("status", ["posted", "active"])
       .gte("departure_time", freshSince())
       .order("departure_time", { ascending: true })
       .limit(50),
     admin
       .from("ride_requests")
-      .select("*, rider:users!ride_requests_rider_id_fkey(id, full_name, faculty)")
+      .select("*, rider:users!ride_requests_rider_id_fkey(id, full_name, faculty, photo_url)")
       .eq("status", "pending")
       .gte("created_at", freshSince())
       .limit(50),
@@ -37,6 +37,7 @@ export async function GET() {
     driverId: r.driver_id,
     name: r.driver?.full_name ?? "Driver",
     faculty: r.driver?.faculty ?? null,
+    photo: r.driver?.photo_url ?? null,
     originLabel: r.origin_label ?? "",
     destinationLabel: r.destination_label ?? "",
     origin: { lat: r.origin_lat, lng: r.origin_lng },
@@ -49,6 +50,7 @@ export async function GET() {
     riderId: q.rider_id,
     name: q.rider?.full_name ?? "Rider",
     faculty: q.rider?.faculty ?? null,
+    photo: q.rider?.photo_url ?? null,
     pickup: { lat: q.pickup_lat, lng: q.pickup_lng },
     pickupLabel: q.pickup_label ?? "",
   }));

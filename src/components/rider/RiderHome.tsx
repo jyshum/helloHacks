@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
-import { ArrowLeft, BadgeCheck, ChevronRight, GraduationCap } from "lucide-react";
+import { ArrowLeft, BadgeCheck, ChevronRight, Search } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import { useMyLocation } from "@/components/app/hooks";
 import { useLiveDrivers } from "@/components/app/useLiveDrivers";
 import LocationSearch from "./LocationSearch";
 import Avatar from "@/components/Avatar";
-import { CAMPUS_SPOTS, type Place } from "@/lib/places";
+import type { Place } from "@/lib/places";
 import { etaMinutes, haversineKm, UBC, type LatLng } from "@/lib/geo";
 import { formatCents, PRICING_FORMULA } from "@/lib/pricing";
 import { MAX_DETOUR_MINUTES } from "@/lib/matching";
@@ -51,6 +51,8 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
   }, []);
 
   const center = myPos ?? pickup ?? UBC;
+  // Frame the map once: on your GPS if allowed, otherwise around the nearest drivers.
+  const [homeFit, setHomeFit] = useState<LatLng[] | null>(null);
   const nearby = useMemo(
     () =>
       drivers
@@ -60,6 +62,12 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
     [drivers, center]
   );
 
+  useEffect(() => {
+    if (homeFit) return;
+    if (firstFix) setHomeFit([firstFix]);
+    else if (nearby.length) setHomeFit([UBC, ...nearby.slice(0, 5).map((d) => d.pos)]);
+  }, [firstFix, nearby, homeFit]);
+
   function pick(f: Field, place: Place) {
     const nextPickup = f === "pickup" ? place : pickup;
     const nextDrop = f === "dropoff" ? place : dropoff;
@@ -68,14 +76,7 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
     if (nextPickup && nextDrop) setStage("choose");
   }
 
-  function quickDestination(place: Place) {
-    setDropoff(place);
-    if (pickup) setStage("choose");
-    else {
-      setField("pickup");
-      setStage("search");
-    }
-  }
+
 
   function confirmPin() {
     const c = map?.getCenter();
@@ -92,7 +93,7 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
     <div className="relative h-[100dvh] w-full overflow-hidden bg-paper">
       <BaseMap
         me={myPos}
-        cars={stage === "pin" ? [] : nearby.map((d) => ({ id: d.driverId, pos: d.pos, onClick: () => router.push(`/profile/${d.driverId}`) }))}
+        cars={stage === "pin" ? [] : nearby.map((d) => ({ id: d.driverId, pos: d.pos, name: d.name, photo: d.photo, live: d.live, onClick: () => router.push(`/profile/${d.driverId}`) }))}
         pins={
           stage === "choose" && pickup && dropoff
             ? [
@@ -101,8 +102,8 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
               ]
             : []
         }
-        fit={stage === "choose" && pickup && dropoff ? [pickup, dropoff] : stage === "home" && firstFix ? [firstFix] : null}
-        bottomPadding={stage === "choose" ? 420 : 300}
+        fit={stage === "choose" && pickup && dropoff ? [pickup, dropoff] : stage === "home" ? homeFit : null}
+        bottomPadding={stage === "choose" ? 420 : 240}
       >
         <MapGrabber onMap={setMap} />
         {stage === "choose" && pickup && dropoff && <TripRoute from={pickup} to={dropoff} />}
@@ -128,33 +129,18 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
               <ChevronRight size={20} aria-hidden />
             </Link>
           )}
-          <h2 className="font-heading text-2xl font-bold text-ink">Hi {me.full_name.split(" ")[0]}</h2>
-
           <button
             onClick={() => {
               setField("dropoff");
               setStage("search");
             }}
-            className="mt-3 flex w-full items-center gap-3 rounded-full bg-paper px-5 py-4 text-left"
+            className="flex w-full items-center gap-3 rounded-full bg-ink/[0.04] px-5 py-4 text-left"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B1B2E" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <span className="flex-1 font-heading text-lg font-semibold text-ink">Where to?</span>
-            <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-ink shadow-soft">Now</span>
+            <Search size={20} className="text-ink" aria-hidden />
+            <span className="flex-1 text-lg font-semibold tracking-tight text-ink">Where to?</span>
           </button>
 
           <NearbyStrip nearby={nearby} center={center} />
-
-          <div className="mt-2 divide-y divide-line">
-            {CAMPUS_SPOTS.slice(0, 3).map((p) => (
-              <button key={p.label} onClick={() => quickDestination(p)} className="row">
-                <span className="row-icon"><GraduationCap size={18} aria-hidden /></span>
-                <span>
-                  <span className="block font-medium text-ink">{p.label}</span>
-                  <span className="block text-sm text-muted">UBC campus</span>
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

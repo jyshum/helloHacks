@@ -5,23 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import {
-  AlertTriangle,
-  BadgeCheck,
-  CalendarClock,
-  Car,
-  Check,
-  Clock,
-  MapPin,
-  MessageCircle,
-  Navigation,
-  Pencil,
-  Timer,
-  UserPlus,
-  Users,
-  X,
-  Zap,
-} from "lucide-react";
+import { AlertTriangle, BadgeCheck, Car, Check, ChevronRight, Clock, MessageCircle, Navigation, Pencil, Plus, Timer, X, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
@@ -30,10 +14,13 @@ import SharedBadge from "@/components/SharedBadge";
 import EnableNotifications from "@/components/pods/EnableNotifications";
 import { decodePolyline, type LatLng } from "@/lib/geo";
 import { dayWord, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
-import { WEEKDAY_LABELS, type Weekday } from "@/lib/pods/types";
+
 import type { MemberView, PodView } from "@/lib/pods/load";
 
 type Props = { view: PodView; me: MenuUser; meFaculty: string | null; meYear: number | null };
+
+const DAY = ["", "M", "T", "W", "T", "F"];
+const first = (n: string) => n.split(" ")[0];
 
 export default function PodScreen(props: Props) {
   return (
@@ -45,9 +32,10 @@ export default function PodScreen(props: Props) {
 
 function Screen({ view, me, meFaculty, meYear }: Props) {
   const router = useRouter();
-  const { pod, driver, driverProfile, vehicle, riders, requests, invited, nextTrip } = view;
+  const { pod, driver, driverProfile, vehicle, riders, requests, nextTrip } = view;
   const mine = view.me!;
   const isDriver = mine.role === "driver";
+  const inPod = isDriver || mine.status === "active";
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,48 +72,49 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
     return data;
   }
 
-  const route = useMemo(
-    () => (driverProfile.route_polyline ? decodePolyline(driverProfile.route_polyline) : []),
-    [driverProfile.route_polyline]
-  );
+  const route = useMemo(() => (driverProfile.route_polyline ? decodePolyline(driverProfile.route_polyline) : []), [driverProfile.route_polyline]);
   const campus = { lat: pod.campus_lat, lng: pod.campus_lng };
-  const pickups = [...riders, ...(mine.status !== "active" ? [mine] : [])].filter((m) => m.pickup_lat != null && m.role === "rider");
+  const pickups = [...riders, ...(mine.status !== "active" && mine.role === "rider" ? [mine] : [])].filter((m) => m.pickup_lat != null);
   const fit: LatLng[] = route.length ? [route[0], campus] : [campus];
-
-  const first = (n: string) => n.split(" ")[0];
   const driverName = first(driver.user.full_name);
+  const shown = view.reliability.completed + view.reliability.missed;
 
   return (
-    <div className="relative min-h-[100dvh] bg-paper">
-      {/* Map header */}
-      <div className="relative h-[34dvh] w-full overflow-hidden">
+    <div className="relative min-h-[100dvh]">
+      {/* Map with everyone's face at their pickup spot */}
+      <div className="relative h-[40dvh] w-full overflow-hidden">
         <BaseMap
           pins={[
-            ...pickups.map((m) => ({ id: m.id, pos: { lat: m.pickup_lat!, lng: m.pickup_lng! }, kind: "pickup" as const })),
+            ...pickups.map((m) => ({ id: m.id, pos: { lat: m.pickup_lat!, lng: m.pickup_lng! }, kind: "rider" as const, name: m.user.full_name, photo: m.user.photo_url })),
             { id: "campus", pos: campus, kind: "dropoff" as const },
           ]}
-          routes={route.length ? [{ id: "route", path: route, color: "#0055B7", opacity: 0.8, weight: 5 }] : []}
+          routes={route.length ? [{ id: "route", path: route, color: "#0055B7", opacity: 0.85, weight: 5 }] : []}
           fit={fit}
-          bottomPadding={20}
+          bottomPadding={40}
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-app items-center justify-between p-4">
           <ProfileMenu me={me} mode={isDriver ? "driver" : "rider"} />
-          <Link href="/commute" className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-semibold text-ink shadow-lift">
-            <Pencil size={14} aria-hidden /> Edit commute
-          </Link>
+          <div className="pointer-events-auto flex gap-2">
+            {inPod && (
+              <Link href={`/pods/${pod.id}/chat`} className="glass flex h-11 w-11 items-center justify-center rounded-full text-ubc" aria-label="Pod chat">
+                <MessageCircle size={19} aria-hidden />
+              </Link>
+            )}
+            <Link href="/commute" className="glass flex h-11 w-11 items-center justify-center rounded-full text-ubc" aria-label="Edit commute">
+              <Pencil size={17} aria-hidden />
+            </Link>
+          </div>
         </div>
       </div>
 
-      <main className="relative z-10 mx-auto -mt-6 w-full max-w-app rounded-t-[24px] bg-paper px-4 pb-12 pt-5">
-        {error && <p className="mb-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      <main className="glass relative z-10 mx-auto -mt-8 min-h-[64dvh] w-full max-w-app rounded-t-[32px] border-b-0 bg-white/65 px-5 pb-14 pt-6">
+        {error && <p className="mb-4 rounded-2xl bg-red-50/80 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        {/* ---------- Rider: invited ---------- */}
         {!isDriver && mine.status === "invited" && (
           <InviteCard
             view={view}
             mine={mine}
-            meFaculty={meFaculty}
-            meYear={meYear}
+            me={{ faculty: meFaculty, year: meYear }}
             busy={!!busy}
             onJoin={() => call(`/api/pods/${pod.id}/join`)}
             onDecline={async () => {
@@ -135,114 +124,98 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
           />
         )}
 
-        {/* ---------- Rider: waiting for approval ---------- */}
         {!isDriver && mine.status === "requested" && (
-          <div className="card p-5 text-center">
-            <Avatar name={driver.user.full_name} photoUrl={driver.user.photo_url} size={64} />
-            <h1 className="mt-3 font-heading text-xl font-bold text-ubc">Waiting for {driverName} to approve</h1>
-            <p className="mt-1 text-sm text-muted">They can see your profile. This updates the moment they decide.</p>
-            <button onClick={() => call(`/api/pods/${pod.id}/leave`)} className="mt-4 text-sm font-semibold text-red-700">Cancel request</button>
+          <div className="rise flex flex-col items-center py-6 text-center">
+            <span className="relative">
+              <span className="absolute inset-0 animate-ping rounded-full bg-sky/25" />
+              <Avatar name={driver.user.full_name} photoUrl={driver.user.photo_url} size={72} />
+            </span>
+            <h1 className="mt-5 text-2xl font-semibold text-ubc">Asked {driverName}</h1>
+            <p className="mt-1 text-sm text-muted">You&apos;ll hear back soon.</p>
+            <button onClick={() => call(`/api/pods/${pod.id}/leave`)} className="mt-6 text-sm font-semibold text-muted">Cancel</button>
           </div>
         )}
 
-        {/* ---------- In the pod ---------- */}
-        {(isDriver || mine.status === "active") && (
-          <>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue">{isDriver ? "Your pod" : `${driverName}'s pod`}</p>
-                <h1 className="font-heading text-2xl font-bold text-ubc">
-                  {driverProfile.home_area ?? "Your area"} → {pod.campus_label}
-                </h1>
-              </div>
-            </div>
-            <DayChips days={driverProfile.days} arriveBy={driverProfile.arrive_by} />
-
-            {nextTrip && (
-              <TripCard
-                view={view}
-                isDriver={isDriver}
-                busy={busy}
-                call={call}
-              />
-            )}
-
-            <Link href={`/pods/${pod.id}/chat`} className="card mt-3 flex items-center gap-3 p-4">
-              <span className="row-icon"><MessageCircle size={18} aria-hidden /></span>
-              <span className="flex-1">
-                <span className="block font-semibold text-ink">Pod chat</span>
-                <span className="block text-sm text-muted">Updates and messages with your pod</span>
+        {inPod && (
+          <div className="rise">
+            <h1 className="text-[28px] font-bold leading-tight text-ubc">
+              {driverProfile.home_area ?? "Home"} <span className="text-muted/50">→</span> UBC
+            </h1>
+            <div className="mt-3 flex items-center justify-between">
+              <DayDots days={driverProfile.days} />
+              <span className="flex items-center gap-1.5 text-[15px] font-semibold text-ink">
+                <Clock size={15} className="text-muted" aria-hidden /> {prettyTime(driverProfile.arrive_by)}
               </span>
-            </Link>
-            <div className="mt-3">
-              <EnableNotifications />
             </div>
 
-            {/* Driver: approvals */}
-            {isDriver && requests.length > 0 && (
-              <section className="mt-6">
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">Wants to join ({requests.length})</h2>
-                {requests.map((r) => (
-                  <ApprovalCard
-                    key={r.id}
-                    r={r}
-                    me={{ faculty: meFaculty, year: meYear }}
-                    busy={!!busy}
-                    onDecide={(action) => call(`/api/pods/${pod.id}/members/${r.id}`, { action })}
-                  />
-                ))}
-              </section>
-            )}
+            {nextTrip && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
 
             {/* Members */}
-            <section className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
-                In this pod · {riders.length + 1} {riders.length ? "people" : "person"}
-              </h2>
-              <div className="card divide-y divide-line px-4">
-                <MemberRow m={driver} label="Driver" extra={view.reliability.completed + view.reliability.missed > 0 ? `Showed up ${view.reliability.completed}/${view.reliability.completed + view.reliability.missed}` : undefined} />
+            <div className="card mt-4 p-4">
+              <div className="no-scrollbar flex gap-4 overflow-x-auto">
+                <Person m={driver} label={isDriver ? "You" : driverName} driver />
                 {riders.map((m) => (
-                  <MemberRow key={m.id} m={m} label={m.user_id === mine.user_id ? "You" : "Rider"} extra={isDriver || m.user_id === mine.user_id ? pickupLine(m) : undefined} />
+                  <Person key={m.id} m={m} label={m.user_id === mine.user_id ? "You" : first(m.user.full_name)} />
                 ))}
-                {isDriver && view.seatsLeft > 0 && (
-                  <div className="flex items-center gap-3 py-3 text-sm text-muted">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-line"><UserPlus size={16} aria-hidden /></span>
-                    {view.seatsLeft} open {view.seatsLeft === 1 ? "seat" : "seats"} · we&apos;re matching riders on your route
-                  </div>
-                )}
+                {isDriver &&
+                  Array.from({ length: Math.max(0, view.seatsLeft) }).map((_, i) => (
+                    <div key={i} className="flex w-14 shrink-0 flex-col items-center">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-ink/15 text-muted">
+                        <Plus size={16} aria-hidden />
+                      </span>
+                      <span className="mt-1.5 text-xs text-muted">Open</span>
+                    </div>
+                  ))}
               </div>
-              {isDriver && invited.length > 0 && (
-                <p className="mt-2 text-xs text-muted">{invited.length} matched {invited.length === 1 ? "rider hasn't" : "riders haven't"} answered their invite yet.</p>
+              {shown > 0 && (
+                <p className="mt-3 border-t border-ink/5 pt-3 text-[13px] text-muted">
+                  {driverName} showed up <b className="text-ink">{view.reliability.completed}/{shown}</b>
+                </p>
               )}
-            </section>
+            </div>
 
-            {isDriver && vehicle && (
-              <section className="mt-6">
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">Your car</h2>
-                <CarCard vehicle={vehicle} verified={!!driver.user.license_verified} />
-              </section>
+            {isDriver && requests.length > 0 && (
+              <div className="mt-4 flex flex-col gap-3">
+                {requests.map((r) => (
+                  <ApprovalCard key={r.id} r={r} me={{ faculty: meFaculty, year: meYear }} busy={!!busy} onDecide={(action) => call(`/api/pods/${pod.id}/members/${r.id}`, { action })} />
+                ))}
+              </div>
             )}
+
+            <Link href={`/pods/${pod.id}/chat`} className="card mt-4 flex items-center gap-3 p-4">
+              <span className="row-icon"><MessageCircle size={18} aria-hidden /></span>
+              <span className="flex-1 font-semibold text-ink">Chat</span>
+              <ChevronRight size={18} className="text-muted" aria-hidden />
+            </Link>
+
+            <div className="mt-3">
+              <EnableNotifications variant="banner" />
+            </div>
+
             {isDriver && (!vehicle || !driver.user.license_verified) && (
-              <Link href="/driver-verify" className="card mt-3 flex items-center gap-3 p-4 text-sm">
-                <BadgeCheck size={22} className="text-blue" aria-hidden />
-                <span className="flex-1"><b>Verify your license &amp; car.</b> Riders are much more likely to join verified drivers.</span>
+              <Link href="/driver-verify" className="card mt-3 flex items-center gap-3 p-4">
+                <span className="row-icon"><BadgeCheck size={18} aria-hidden /></span>
+                <span className="flex-1 font-semibold text-ink">Get verified</span>
+                <ChevronRight size={18} className="text-muted" aria-hidden />
               </Link>
             )}
 
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <Link href="/map" className="flex items-center gap-1.5 text-sm font-semibold text-blue"><Zap size={14} aria-hidden /> Need a one-off ride today?</Link>
+            <div className="mt-10 flex items-center justify-center gap-6 text-sm">
+              <Link href="/map" className="flex items-center gap-1.5 font-semibold text-blue">
+                <Zap size={14} aria-hidden /> Ride today
+              </Link>
               <button
                 onClick={async () => {
-                  if (!confirm(isDriver ? "Stop driving this pod? Your riders will be rematched." : "Leave this pod?")) return;
+                  if (!confirm(isDriver ? "Stop driving this pod?" : "Leave this pod?")) return;
                   const r = await call(`/api/pods/${pod.id}/leave`);
                   if (r) router.push("/pods");
                 }}
-                className="text-sm font-semibold text-red-700"
+                className="font-semibold text-muted"
               >
-                {isDriver ? "Stop driving this pod" : "Leave pod"}
+                {isDriver ? "Stop driving" : "Leave pod"}
               </button>
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>
@@ -251,50 +224,47 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
 
 // ---------------------------------------------------------------------------------
 
-function pickupLine(m: MemberView) {
-  return m.pickup_time ? `Pickup ${prettyTime(m.pickup_time)} · ${m.pickup_label ?? ""}` : m.pickup_label ?? undefined;
-}
-
-function DayChips({ days, arriveBy }: { days: Weekday[]; arriveBy: string }) {
+function DayDots({ days }: { days: number[] }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {([1, 2, 3, 4, 5] as Weekday[]).map((d) => (
-        <span key={d} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${days.includes(d) ? "bg-ubc text-white" : "bg-line/60 text-muted"}`}>
-          {WEEKDAY_LABELS[d]}
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((d) => (
+        <span
+          key={d}
+          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${days.includes(d) ? "bg-ubc text-white" : "bg-ink/5 text-muted/60"}`}
+        >
+          {DAY[d]}
         </span>
       ))}
-      <span className="ml-1 flex items-center gap-1 text-sm text-muted"><Clock size={14} aria-hidden /> on campus by {prettyTime(arriveBy)}</span>
     </div>
+  );
+}
+
+function Person({ m, label, driver }: { m: MemberView; label: string; driver?: boolean }) {
+  return (
+    <Link href={`/profile/${m.user_id}`} className="flex w-14 shrink-0 flex-col items-center">
+      <span className="relative">
+        <Avatar name={m.user.full_name} photoUrl={m.user.photo_url} size={48} tone={driver ? "driver" : "rider"} />
+        {driver && (
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-ubc text-white">
+            <Car size={11} aria-hidden />
+          </span>
+        )}
+      </span>
+      <span className="mt-1.5 w-full truncate text-center text-xs font-medium text-ink">{label}</span>
+    </Link>
   );
 }
 
 function TimeSaved({ transit, drive }: { transit: number | null; drive: number | null }) {
-  if (transit == null || drive == null) return null;
-  const saved = transit - drive;
-  if (saved < 5) return null;
+  if (transit == null || drive == null || transit - drive < 5) return null;
   return (
-    <div className="rounded-2xl bg-green/10 p-4">
-      <p className="flex items-center gap-2 font-heading text-lg font-bold text-green">
-        <Timer size={20} aria-hidden /> Saves you ~{saved} min each way
-      </p>
-      <p className="mt-0.5 text-sm text-green/90">
-        Transit {transit} min → {drive} min with the pod
-      </p>
-    </div>
-  );
-}
-
-function CarCard({ vehicle, verified }: { vehicle: NonNullable<PodView["vehicle"]>; verified: boolean }) {
-  return (
-    <div className="card overflow-hidden">
-      {vehicle.photo_url && <img src={vehicle.photo_url} alt="Car" className="h-32 w-full object-cover" />}
-      <div className="flex items-center justify-between p-4">
-        <div>
-          <p className="font-heading font-semibold text-ink">{vehicle.color} {vehicle.make_model}</p>
-          {verified && <p className="flex items-center gap-1 text-xs font-semibold text-green"><BadgeCheck size={14} aria-hidden /> License verified</p>}
-        </div>
-        <span className="rounded-lg border-2 border-ubc px-2 py-0.5 font-mono text-sm font-bold tracking-wider text-ubc">{vehicle.license_plate}</span>
-      </div>
+    <div className="flex items-center justify-between rounded-2xl bg-green/10 px-4 py-3 text-green">
+      <span className="flex items-center gap-2 font-semibold">
+        <Timer size={18} aria-hidden /> {transit - drive} min saved
+      </span>
+      <span className="text-sm">
+        {transit} → {drive} min
+      </span>
     </div>
   );
 }
@@ -302,73 +272,56 @@ function CarCard({ vehicle, verified }: { vehicle: NonNullable<PodView["vehicle"
 function InviteCard({
   view,
   mine,
-  meFaculty,
-  meYear,
+  me,
   busy,
   onJoin,
   onDecline,
 }: {
   view: PodView;
   mine: MemberView;
-  meFaculty: string | null;
-  meYear: number | null;
+  me: { faculty: string | null; year: number | null };
   busy: boolean;
   onJoin: () => void;
   onDecline: () => void;
 }) {
   const { driver, vehicle, riders, driverProfile } = view;
   return (
-    <div>
-      <p className="text-center text-sm font-semibold uppercase tracking-wide text-blue">We found your pod</p>
-      <div className="card mt-3 p-5">
-        <div className="flex items-center gap-4">
-          <Link href={`/profile/${driver.user_id}`}><Avatar name={driver.user.full_name} photoUrl={driver.user.photo_url} size={64} /></Link>
-          <div className="min-w-0 flex-1">
-            <Link href={`/profile/${driver.user_id}`} className="font-heading text-xl font-bold text-ink">{driver.user.full_name}</Link>
-            <p className="text-sm text-muted">
-              ★ {Number(driver.user.rating_avg ?? 5).toFixed(1)}
-              {driver.user.faculty ? ` · ${driver.user.faculty}` : ""}
-              {driver.user.year ? ` · Year ${driver.user.year}` : ""}
-            </p>
-            {driver.user.license_verified && (
-              <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-green"><BadgeCheck size={14} aria-hidden /> License verified by hoppedIn</p>
-            )}
-          </div>
-        </div>
-        <div className="mt-2"><SharedBadge a={{ faculty: meFaculty, year: meYear }} b={driver.user} /></div>
-
-        <div className="mt-4"><TimeSaved transit={mine.transit_minutes} drive={mine.drive_minutes} /></div>
-
-        <div className="mt-4 space-y-3 text-sm">
-          <InfoLine icon={<CalendarClock size={18} aria-hidden />} title={`${mine.days.map((d) => WEEKDAY_LABELS[d as Weekday]).join(", ")}`} text={`On campus by ${prettyTime(driverProfile.arrive_by)} · ${driverProfile.campus_label}`} />
-          <InfoLine icon={<MapPin size={18} aria-hidden />} title={`Pickup ${prettyTime(mine.pickup_time)}`} text={mine.pickup_label ?? ""} />
-          <InfoLine
-            icon={<Users size={18} aria-hidden />}
-            title={riders.length ? `${riders.length} other ${riders.length === 1 ? "rider" : "riders"} already in` : "You'd be the first rider"}
-            text={riders.map((r) => `${r.user.full_name.split(" ")[0]}${r.user.faculty ? ` (${r.user.faculty})` : ""}`).join(", ") || `From ${driverProfile.home_area ?? "near you"}`}
-          />
+    <div className="rise">
+      <div className="flex items-center gap-4">
+        <Link href={`/profile/${driver.user_id}`}>
+          <Avatar name={driver.user.full_name} photoUrl={driver.user.photo_url} size={64} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 text-2xl font-bold text-ink">
+            {first(driver.user.full_name)}
+            {driver.user.license_verified && <BadgeCheck size={20} className="text-blue" aria-label="Verified" />}
+          </p>
+          <p className="truncate text-sm text-muted">{vehicle ? `${vehicle.color} ${vehicle.make_model}` : driver.user.faculty}</p>
         </div>
       </div>
-
-      {vehicle && <div className="mt-3"><CarCard vehicle={vehicle} verified={!!driver.user.license_verified} /></div>}
-
-      <div className="mt-4 grid grid-cols-[1fr_1.6fr] gap-2">
-        <button onClick={onDecline} disabled={busy} className="btn-ghost whitespace-nowrap px-3">Not for me</button>
-        <button onClick={onJoin} disabled={busy} className="btn-ubc py-4 text-lg">Join pod</button>
+      <div className="mt-3">
+        <SharedBadge a={me} b={driver.user} />
       </div>
-      <p className="mt-2 text-center text-xs text-muted">{driver.user.full_name.split(" ")[0]} approves new riders. You can leave any time.</p>
-    </div>
-  );
-}
-
-function InfoLine({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <div className="flex gap-3">
-      <span className="mt-0.5 text-muted">{icon}</span>
-      <div className="min-w-0">
-        <p className="font-semibold text-ink">{title}</p>
-        <p className="text-muted">{text}</p>
+      <div className="mt-4">
+        <TimeSaved transit={mine.transit_minutes} drive={mine.drive_minutes} />
       </div>
+      <div className="mt-4 flex items-center justify-between">
+        <DayDots days={mine.days} />
+        <span className="text-[15px] font-semibold text-ink">{prettyTime(mine.pickup_time)}</span>
+      </div>
+      <p className="mt-2 text-sm text-muted">{mine.pickup_label}</p>
+      {riders.length > 0 && (
+        <div className="mt-4 flex -space-x-2">
+          {riders.map((r) => (
+            <Avatar key={r.id} name={r.user.full_name} photoUrl={r.user.photo_url} size={30} tone="rider" />
+          ))}
+        </div>
+      )}
+      <div className="mt-6 grid grid-cols-[1fr_1.8fr] gap-2">
+        <button onClick={onDecline} disabled={busy} className="btn-ghost">Pass</button>
+        <button onClick={onJoin} disabled={busy} className="btn-ubc">Join</button>
+      </div>
+      <p className="mt-3 text-center text-xs text-muted">{driverProfile.campus_label}</p>
     </div>
   );
 }
@@ -384,57 +337,27 @@ function ApprovalCard({
   busy: boolean;
   onDecide: (a: "approve" | "decline") => void;
 }) {
-  const saved = r.transit_minutes != null && r.drive_minutes != null ? r.transit_minutes - r.drive_minutes : null;
   return (
-    <div className="card mb-3 p-4">
+    <div className="card rise p-4">
       <div className="flex items-center gap-3">
-        <Link href={`/profile/${r.user_id}`}><Avatar name={r.user.full_name} photoUrl={r.user.photo_url} size={52} tone="rider" /></Link>
+        <Link href={`/profile/${r.user_id}`}>
+          <Avatar name={r.user.full_name} photoUrl={r.user.photo_url} size={48} tone="rider" />
+        </Link>
         <div className="min-w-0 flex-1">
-          <Link href={`/profile/${r.user_id}`} className="font-heading font-semibold text-ink">{r.user.full_name}</Link>
-          <p className="text-sm text-muted">
-            ★ {Number(r.user.rating_avg ?? 5).toFixed(1)} ({r.user.rating_count ?? 0})
-            {r.user.faculty ? ` · ${r.user.faculty}` : ""}
-            {r.user.year ? ` · Year ${r.user.year}` : ""}
+          <p className="font-semibold text-ink">{r.user.full_name}</p>
+          <p className="text-[13px] text-muted">
+            ★ {Number(r.user.rating_avg ?? 5).toFixed(1)} · {r.area ?? r.user.faculty} · +{Math.round(Number(r.detour_minutes ?? 0))} min
           </p>
         </div>
-        <Link href={`/profile/${r.user_id}`} className="text-sm font-semibold text-blue">Profile</Link>
       </div>
-      <div className="mt-2"><SharedBadge a={me} b={r.user} /></div>
-      <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-frost p-3 text-center text-sm">
-        <Stat value={`${r.days.length}`} label={r.days.map((d) => WEEKDAY_LABELS[d as Weekday][0]).join(" ")} />
-        <Stat value={`+${Math.round(Number(r.detour_minutes ?? 0))} min`} label="detour" />
-        <Stat value={saved && saved > 0 ? `${saved} min` : "–"} label="they save" />
+      <div className="mt-2">
+        <SharedBadge a={me} b={r.user} />
       </div>
-      <p className="mt-2 flex items-center gap-1.5 text-sm text-muted"><MapPin size={14} aria-hidden /> {pickupLine(r)}</p>
-      <div className="mt-3 grid grid-cols-[1fr_2fr] gap-2">
-        <button onClick={() => onDecide("decline")} disabled={busy} className="btn-ghost">Decline</button>
-        <button onClick={() => onDecide("approve")} disabled={busy} className="btn-ubc">Approve</button>
+      <div className="mt-3 grid grid-cols-[1fr_1.8fr] gap-2">
+        <button onClick={() => onDecide("decline")} disabled={busy} className="btn-ghost py-3">Decline</button>
+        <button onClick={() => onDecide("approve")} disabled={busy} className="btn-ubc py-3">Approve</button>
       </div>
     </div>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <p className="font-heading font-semibold text-ubc">{value}</p>
-      <p className="text-[11px] text-muted">{label}</p>
-    </div>
-  );
-}
-
-function MemberRow({ m, label, extra }: { m: MemberView; label: string; extra?: string }) {
-  return (
-    <Link href={`/profile/${m.user_id}`} className="flex items-center gap-3 py-3">
-      <Avatar name={m.user.full_name} photoUrl={m.user.photo_url} size={40} tone={m.role === "driver" ? "driver" : "rider"} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-ink">
-          {m.user.full_name} <span className="text-xs font-normal text-muted">· {label}</span>
-        </p>
-        <p className="truncate text-xs text-muted">{extra ?? [m.area, m.user.faculty].filter(Boolean).join(" · ")}</p>
-      </div>
-      {m.user.license_verified && m.role === "driver" && <BadgeCheck size={18} className="text-green" aria-label="License verified" />}
-    </Link>
   );
 }
 
@@ -453,7 +376,7 @@ function TripCard({
   const trip = view.nextTrip!;
   const { pod, driver, riders } = view;
   const mine = view.me!;
-  const driverName = driver.user.full_name.split(" ")[0];
+  const driverName = first(driver.user.full_name);
   const when = prettyDate(trip.date);
   const day = dayWord(trip.date);
   const isToday = trip.date === vancouverNow().date;
@@ -484,91 +407,86 @@ function TripCard({
   const firstRequestId = Object.values(trip.requestIdByUser)[0];
 
   let status = "";
-  if (trip.status === "live") status = isDriver ? "You're on the way" : `${driverName} is on the way`;
-  else if (trip.status === "confirmed") status = isDriver ? "You confirmed. Thanks!" : `${driverName} confirmed`;
-  else if (trip.status === "cancelled") status = isDriver ? "You're not driving" : `${driverName} can't drive`;
+  if (trip.status === "live") status = isDriver ? "On the way" : `${driverName} is coming`;
+  else if (trip.status === "confirmed") status = isDriver ? "Confirmed" : `${driverName} confirmed`;
+  else if (trip.status === "cancelled") status = "No ride";
   else if (trip.status === "missed") status = "Driver didn't show";
-  else if (trip.status === "completed") status = "Done. Nice commute!";
-  else status = isDriver ? `${coming.length} ${coming.length === 1 ? "rider" : "riders"} coming` : `Waiting for ${driverName} to confirm`;
+  else if (trip.status === "completed") status = "Done";
+  else status = isDriver ? `${coming.length} ${coming.length === 1 ? "rider" : "riders"}` : "Waiting to confirm";
 
   return (
-    <div className="card mt-4 p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Next ride · {when}</p>
-      <p className="mt-1 font-heading text-xl font-bold text-ink">{status}</p>
-
-      {!isDriver && !skipping && mine.pickup_time && trip.status !== "cancelled" && (
-        <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-          <MapPin size={14} aria-hidden /> Pickup {prettyTime(mine.pickup_time)} · {mine.pickup_label}
-        </p>
-      )}
-      {!isDriver && skipping && <p className="mt-1 text-sm text-muted">You said you can&apos;t make it {day}.</p>}
+    <div className="card mt-5 p-5">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[13px] font-medium text-muted">{when}</p>
+        {!isDriver && !skipping && mine.pickup_time && trip.status !== "cancelled" && (
+          <p className="text-[13px] font-semibold text-ink">{prettyTime(mine.pickup_time)}</p>
+        )}
+      </div>
+      <p className="mt-1 text-[22px] font-semibold tracking-tight text-ink">{skipping && !isDriver ? "You're skipping" : status}</p>
+      {!isDriver && !skipping && mine.pickup_label && trip.status !== "cancelled" && <p className="text-sm text-muted">{mine.pickup_label}</p>}
 
       {isDriver && coming.length > 0 && trip.status !== "cancelled" && (
-        <div className="mt-3 flex flex-col gap-1.5 text-sm">
+        <div className="mt-3 flex flex-col gap-2">
           {riders.map((r) => {
             const skip = trip.skippedUserIds.includes(r.user_id);
             return (
-              <p key={r.id} className={`flex items-center gap-2 ${skip ? "text-muted line-through" : "text-ink"}`}>
-                <span className="w-16 font-mono text-xs text-muted">{prettyTime(r.pickup_time)}</span>
-                {r.user.full_name.split(" ")[0]} · {r.pickup_label}
-              </p>
+              <div key={r.id} className={`flex items-center gap-3 text-sm ${skip ? "opacity-40" : ""}`}>
+                <Avatar name={r.user.full_name} photoUrl={r.user.photo_url} size={28} tone="rider" />
+                <span className={`flex-1 truncate ${skip ? "line-through" : "text-ink"}`}>{first(r.user.full_name)} · {r.pickup_label}</span>
+                <span className="font-semibold text-ink">{prettyTime(r.pickup_time)}</span>
+              </div>
             );
           })}
         </div>
       )}
-      {isDriver && riders.length === 0 && <p className="mt-1 text-sm text-muted">No riders yet. We&apos;re matching people on your route.</p>}
 
-      {late && (
-        <Banner tone="warn" icon={<Clock size={18} aria-hidden />} text={`${driverName} hasn't started yet. We've let them know.`} />
-      )}
+      {late && <Banner tone="warn" icon={<Clock size={17} aria-hidden />} text={`${driverName} hasn't left yet`} />}
       {noShow && (
-        <Banner tone="bad" icon={<AlertTriangle size={18} aria-hidden />} text={`Looks like ${driverName} isn't coming.`}>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button onClick={() => call(url, { action: "missed", date: trip.date })} className="btn-ghost py-2 text-sm">Report no-show</button>
-            <Link href="/map" className="btn-ubc py-2 text-sm">Find a ride now</Link>
+        <Banner tone="bad" icon={<AlertTriangle size={17} aria-hidden />} text={`${driverName} isn't coming`}>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button onClick={() => call(url, { action: "missed", date: trip.date })} className="btn-ghost py-2.5 text-sm">Report</button>
+            <Link href="/map" className="btn-ubc py-2.5 text-sm">Find a ride</Link>
           </div>
         </Banner>
       )}
-      {!isDriver && ["cancelled", "missed"].includes(trip.status) && (
-        <Link href="/map" className="btn-ubc mt-4 w-full gap-2"><Zap size={16} aria-hidden /> Find a ride now</Link>
-      )}
 
       <div className="mt-4 flex flex-col gap-2">
-        {/* Rider actions */}
-        {!isDriver && trip.status === "live" && myRequestId && (
-          <Link href={`/match/${myRequestId}`} className="btn-ubc w-full gap-2 py-4"><Navigation size={18} aria-hidden /> Track the car live</Link>
+        {!isDriver && ["cancelled", "missed"].includes(trip.status) && (
+          <Link href="/map" className="btn-ubc w-full"><Zap size={16} aria-hidden /> Find a ride</Link>
         )}
-        {!isDriver && !["live", "completed", "missed"].includes(trip.status) && (
+        {!isDriver && trip.status === "live" && myRequestId && (
+          <Link href={`/match/${myRequestId}`} className="btn-ubc w-full py-4"><Navigation size={18} aria-hidden /> Track</Link>
+        )}
+        {!isDriver && !["live", "completed", "missed", "cancelled"].includes(trip.status) && (
           <button
             disabled={!!busy}
             onClick={() => call(`/api/pods/${pod.id}/skip`, { date: trip.date }, skipping ? "DELETE" : "POST")}
             className="btn-ghost w-full"
           >
-            {skipping ? <><Check size={16} aria-hidden /> Actually, I&apos;m coming</> : <><X size={16} aria-hidden /> Can&apos;t make it {day}</>}
+            {skipping ? <><Check size={16} aria-hidden /> I&apos;m coming</> : <><X size={16} aria-hidden /> Skip {day}</>}
           </button>
         )}
         {!isDriver && trip.status === "completed" && trip.rideId && (
-          <Link href={`/trip/${trip.rideId}/complete`} className="btn-ghost w-full">Rate this ride</Link>
+          <Link href={`/trip/${trip.rideId}/complete`} className="btn-ghost w-full">Rate</Link>
         )}
 
-        {/* Driver actions */}
         {isDriver && riders.length > 0 && trip.status === "live" && firstRequestId && (
-          <Link href={`/match/${firstRequestId}`} className="btn-ubc w-full gap-2 py-4"><Navigation size={18} aria-hidden /> Open live trip</Link>
+          <Link href={`/match/${firstRequestId}`} className="btn-ubc w-full py-4"><Navigation size={18} aria-hidden /> Open trip</Link>
         )}
         {isDriver && riders.length > 0 && ["none", "scheduled", "confirmed"].includes(trip.status) && (
           <>
             {isToday && coming.length > 0 && (
-              <button disabled={!!busy} onClick={() => call(url, { action: "start", date: trip.date })} className="btn-ubc w-full gap-2 py-4">
+              <button disabled={!!busy} onClick={() => call(url, { action: "start", date: trip.date })} className="btn-ubc w-full py-4">
                 <Car size={18} aria-hidden /> Start pickup
               </button>
             )}
             {trip.status !== "confirmed" && (
-              <button disabled={!!busy} onClick={() => call(url, { action: "confirm", date: trip.date, leaveAt: firstPickup })} className={isToday ? "btn-ghost w-full" : "btn-ubc w-full py-4"}>
-                <Check size={16} aria-hidden /> Yes, I&apos;m driving {day}
+              <button disabled={!!busy} onClick={() => call(url, { action: "confirm", date: trip.date, leaveAt: firstPickup })} className={isToday ? "btn-ghost w-full" : "btn-ubc w-full"}>
+                <Check size={16} aria-hidden /> Driving {day}
               </button>
             )}
-            <button disabled={!!busy} onClick={() => confirm(`Tell your pod you can't drive ${day}?`) && call(url, { action: "cancel", date: trip.date })} className="w-full py-2 text-sm font-semibold text-red-700">
-              Can&apos;t drive {day}
+            <button disabled={!!busy} onClick={() => confirm(`Can't drive ${day}?`) && call(url, { action: "cancel", date: trip.date })} className="w-full py-2 text-sm font-semibold text-muted">
+              Can&apos;t drive
             </button>
           </>
         )}
@@ -579,9 +497,10 @@ function TripCard({
 
 function Banner({ tone, icon, text, children }: { tone: "warn" | "bad"; icon: React.ReactNode; text: string; children?: React.ReactNode }) {
   return (
-    <div className={`mt-4 rounded-2xl p-4 text-sm ${tone === "warn" ? "bg-sky/10 text-ubc" : "bg-red-50 text-red-800"}`}>
+    <div className={`mt-4 rounded-2xl p-4 text-sm ${tone === "warn" ? "bg-sky/10 text-ubc" : "bg-red-50/80 text-red-800"}`}>
       <p className="flex items-center gap-2 font-semibold">{icon}{text}</p>
       {children}
     </div>
   );
 }
+

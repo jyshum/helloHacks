@@ -49,35 +49,35 @@ function ModeChooser({ name, onChoose }: { name: string; onChoose: (m: Mode) => 
   const first = name.split(" ")[0];
   return (
     <main className="screen flex flex-col justify-center">
-      <p className="text-sm font-semibold uppercase tracking-wide text-blue">Hi {first}</p>
-      <h1 className="mt-2 text-3xl font-bold leading-tight text-ubc">What are you doing today?</h1>
-      <p className="mt-2 text-muted">You can switch any time from the menu.</p>
+      <p className="text-sm font-medium text-muted">Hi {first}</p>
+      <h1 className="mt-1 text-[34px] font-bold leading-tight text-ubc">Today</h1>
+      
 
       <div className="mt-8 flex flex-col gap-3">
         <button
           onClick={() => onChoose("rider")}
-          className="group flex items-center gap-4 rounded-card border-2 border-sky bg-white p-5 text-left shadow-soft transition hover:-translate-y-0.5"
+          className="glass group flex items-center gap-4 rounded-card p-5 text-left transition hover:-translate-y-0.5"
         >
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky/10 text-sky">
             <MapPin size={26} aria-hidden />
           </span>
           <span className="flex-1">
-            <span className="block font-heading text-lg font-bold text-ubc">I need a ride</span>
-            <span className="block text-sm text-muted">Nearby drivers can see your pickup and profile.</span>
+            <span className="block text-lg font-semibold text-ubc">Ride</span>
+            
           </span>
           <ChevronRight size={20} className="text-sky" aria-hidden />
         </button>
 
         <button
           onClick={() => onChoose("driver")}
-          className="group flex items-center gap-4 rounded-card bg-ubc p-5 text-left text-white shadow-lift transition hover:-translate-y-0.5"
+          className="group flex items-center gap-4 rounded-card bg-ubc p-5 text-left text-white shadow-glow transition hover:-translate-y-0.5"
         >
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
             <Car size={26} aria-hidden />
           </span>
           <span className="flex-1">
-            <span className="block font-heading text-lg font-bold">I&apos;m driving</span>
-            <span className="block text-sm text-white/70">Riders on your way can see your route.</span>
+            <span className="block text-lg font-semibold">Drive</span>
+            
           </span>
           <ChevronRight size={20} aria-hidden />
         </button>

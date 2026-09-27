@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 
-// Proxies Places API (New) autocomplete, biased to Metro Vancouver.
+// Proxies Places API (New) autocomplete, limited to Metro Vancouver.
 // Returns { unavailable: true } if the API isn't enabled so the UI can fall back.
 export async function POST(req: Request) {
   if (!(await getProfile())) return jsonError("Sign in first.", 401);
@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       input,
       includedRegionCodes: ["ca"],
-      locationBias: { circle: { center: { latitude: 49.25, longitude: -123.15 }, radius: 30000 } },
+      // Metro Vancouver only (Squamish-ish down to the border, UBC east to Langley).
+      locationRestriction: { rectangle: { low: { latitude: 48.99, longitude: -123.3 }, high: { latitude: 49.45, longitude: -122.45 } } },
     }),
   });
   const body = await res.json();

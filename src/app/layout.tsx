@@ -1,15 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "UBC Carpool",
-  description: "Share rides to campus. Split the gas.",
+  title: "hoppedIn",
+  description: "Ride to UBC together.",
   // PWA install + web push (iOS only allows push for apps added to the Home Screen).
   manifest: "/manifest.webmanifest",
   icons: { apple: "/icons/apple-touch-icon.png" },
@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={spaceGrotesk.variable}>{children}</body>
+      <body className={inter.variable}>{children}</body>
     </html>
   );
 }

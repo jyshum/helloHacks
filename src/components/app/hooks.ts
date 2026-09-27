@@ -6,7 +6,7 @@ import { DEMO_MODE } from "@/lib/demo";
 import type { LatLng } from "@/lib/geo";
 import type { Role } from "@/lib/types";
 
-export type PresenceUser = { user_id: string; role: Role; name: string; lat: number; lng: number };
+export type PresenceUser = { user_id: string; role: Role; name: string; photo?: string | null; lat: number; lng: number };
 
 // Live browser location. null until the user allows it.
 export function useMyLocation(): LatLng | null {
@@ -26,7 +26,7 @@ export function useMyLocation(): LatLng | null {
 // Shares my position on a Supabase presence channel and returns everyone else on it.
 export function usePresence(
   channelName: string,
-  me: { id: string; role: Role; full_name: string },
+  me: { id: string; role: Role; full_name: string; photo_url?: string | null },
   myPos: LatLng | null,
   intervalMs = 3000,
   share = true // false = watch others without broadcasting my own position
@@ -56,7 +56,7 @@ export function usePresence(
 
     const track = () => {
       const p = posRef.current;
-      if (p && shareRef.current) channel.track({ user_id: me.id, role: me.role, name: me.full_name, lat: p.lat, lng: p.lng });
+      if (p && shareRef.current) channel.track({ user_id: me.id, role: me.role, name: me.full_name, photo: me.photo_url ?? null, lat: p.lat, lng: p.lng });
     };
     const t = setInterval(track, intervalMs);
     return () => {
@@ -64,15 +64,15 @@ export function usePresence(
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [channelName, me.id, me.role, me.full_name, intervalMs]);
+  }, [channelName, me.id, me.role, me.full_name, me.photo_url, intervalMs]);
 
   // Push immediately when location arrives; stop sharing the moment share turns off.
   useEffect(() => {
     const ch = channelRef.current;
     if (!ch) return;
     if (!share) ch.untrack();
-    else if (myPos) ch.track({ user_id: me.id, role: me.role, name: me.full_name, lat: myPos.lat, lng: myPos.lng });
-  }, [share, myPos, me.id, me.role, me.full_name]);
+    else if (myPos) ch.track({ user_id: me.id, role: me.role, name: me.full_name, photo: me.photo_url ?? null, lat: myPos.lat, lng: myPos.lng });
+  }, [share, myPos, me.id, me.role, me.full_name, me.photo_url]);
 
   return others;
 }

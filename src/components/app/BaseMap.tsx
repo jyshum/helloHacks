@@ -5,9 +5,11 @@ import { useEffect } from "react";
 import { UBC_MAP_STYLE } from "@/lib/mapStyle";
 import { UBC, type LatLng } from "@/lib/geo";
 import { DRIVER_ICON, RIDER_ICON, SELF_ICON } from "@/components/map/markers";
+import MapOverlay from "./MapOverlay";
+import AvatarPin from "./AvatarPin";
 
-export type MapCar = { id: string; pos: LatLng; onClick?: () => void };
-export type MapPin = { id: string; pos: LatLng; kind: "rider" | "pickup" | "dropoff"; onClick?: () => void };
+export type MapCar = { id: string; pos: LatLng; name?: string; photo?: string | null; live?: boolean; onClick?: () => void };
+export type MapPin = { id: string; pos: LatLng; kind: "rider" | "pickup" | "dropoff"; name?: string; photo?: string | null; onClick?: () => void };
 
 function icon(url: string, w: number, h: number, ax: number, ay: number): google.maps.Icon {
   return { url, scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(ax, ay) };
@@ -53,7 +55,14 @@ export default function BaseMap({ me, cars = [], pins = [], routes = [], fit, bo
               strokeWeight={r.weight ?? 4}
             />
           ))}
-          {pins.map((p) => (
+          {pins
+            .filter((p) => p.kind === "rider" && p.name)
+            .map((p) => (
+              <MapOverlay key={p.id} position={p.pos} zIndex={50}>
+                <AvatarPin name={p.name!} photo={p.photo} kind="rider" size={34} onClick={p.onClick} />
+              </MapOverlay>
+            ))}
+          {pins.filter((p) => !(p.kind === "rider" && p.name)).map((p) => (
             <Marker
               key={p.id}
               position={p.pos}
@@ -68,9 +77,15 @@ export default function BaseMap({ me, cars = [], pins = [], routes = [], fit, bo
               }
             />
           ))}
-          {cars.map((c) => (
-            <Marker key={c.id} position={c.pos} onClick={c.onClick} zIndex={100} icon={icon(DRIVER_ICON, 40, 40, 20, 20)} />
-          ))}
+          {cars.map((c) =>
+            c.name ? (
+              <MapOverlay key={c.id} position={c.pos} zIndex={100}>
+                <AvatarPin name={c.name} photo={c.photo} kind="driver" live={c.live} onClick={c.onClick} />
+              </MapOverlay>
+            ) : (
+              <Marker key={c.id} position={c.pos} onClick={c.onClick} zIndex={100} icon={icon(DRIVER_ICON, 40, 40, 20, 20)} />
+            )
+          )}
           {me && <Marker position={me} zIndex={1000} icon={icon(SELF_ICON, 36, 36, 18, 18)} />}
           <CameraFit points={fit} bottomPadding={bottomPadding} />
         </>

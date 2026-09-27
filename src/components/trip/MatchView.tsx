@@ -37,7 +37,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
   const [showCost, setShowCost] = useState(false);
 
   // Both sides share live GPS on a private per-trip channel.
-  const live = usePresence(`trip-${request.id}`, { id: meUser.id, role: viewer, full_name: meUser.full_name }, myPos, 2500);
+  const live = usePresence(`trip-${request.id}`, { id: meUser.id, role: viewer, full_name: meUser.full_name, photo_url: meUser.photo_url }, myPos, 2500);
   const otherPos: LatLng | null = live.find((u) => u.user_id === other.id) ?? null;
   const driverPos = viewer === "driver" ? myPos : otherPos;
   const riderPos = viewer === "rider" ? myPos : otherPos;
@@ -123,11 +123,11 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
     <div className="relative h-[100dvh] w-full overflow-hidden bg-paper">
       <BaseMap
         me={myPos}
-        cars={viewer === "rider" && otherPos ? [{ id: "driver", pos: otherPos }] : []}
+        cars={viewer === "rider" && otherPos ? [{ id: "driver", pos: otherPos, name: driver.full_name, photo: driver.photo_url, live: true }] : []}
         pins={[
           { id: "pickup", pos: pickup, kind: "pickup" },
           { id: "dropoff", pos: dropoff, kind: "dropoff" },
-          ...(viewer === "driver" && riderPos && !started ? [{ id: "rider", pos: riderPos, kind: "rider" as const }] : []),
+          ...(viewer === "driver" && riderPos && !started ? [{ id: "rider", pos: riderPos, kind: "rider" as const, name: rider.full_name, photo: rider.photo_url }] : []),
         ]}
         fit={done || ended ? [pickup, dropoff] : fitPoints}
         bottomPadding={430}

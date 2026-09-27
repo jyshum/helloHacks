@@ -192,8 +192,8 @@ export default function PodChat({ podId, me }: { podId: string; me: ChatPerson }
   const tooLong = draft.length > MAX_MESSAGE_LENGTH;
 
   return (
-    <main className="relative mx-auto flex h-[100dvh] w-full max-w-app flex-col bg-paper">
-      <header className="flex items-center gap-3 border-b border-line bg-white px-4 py-3">
+    <main className="relative mx-auto flex h-[100dvh] w-full max-w-app flex-col">
+      <header className="flex items-center gap-3 border-b border-white/60 bg-white/60 px-4 py-3 backdrop-blur-2xl backdrop-saturate-150">
         <BackButton className="shadow-none" />
         <div className="min-w-0 flex-1">
           <h1 className="font-heading text-lg font-bold leading-tight text-ubc">Pod chat</h1>
@@ -264,7 +264,7 @@ export default function PodChat({ podId, me }: { podId: string; me: ChatPerson }
         </button>
       )}
 
-      <footer className="border-t border-line bg-white px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3">
+      <footer className="border-t border-white/60 bg-white/60 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-2xl backdrop-saturate-150">
         {loaded && !loadError && !canPost ? (
           <p className="py-2 text-center text-sm text-muted">You can chat once the driver approves you.</p>
         ) : (

@@ -21,15 +21,17 @@ const config: Config = {
         line: "#DCE4EE", // borders
       },
       fontFamily: {
-        heading: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
-        sans: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        // SF Pro on Apple devices, Inter everywhere else.
+        heading: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["-apple-system", "BlinkMacSystemFont", "SF Pro Text", "var(--font-inter)", "system-ui", "sans-serif"],
       },
       borderRadius: {
-        card: "20px",
+        card: "28px",
       },
       boxShadow: {
-        soft: "0 4px 20px rgba(28, 36, 48, 0.08)",
-        lift: "0 8px 30px rgba(28, 36, 48, 0.12)",
+        soft: "0 8px 32px rgba(0, 33, 69, 0.07)",
+        lift: "0 16px 48px rgba(0, 33, 69, 0.14)",
+        glow: "0 10px 30px rgba(0, 33, 69, 0.28)",
       },
       maxWidth: {
         app: "440px",

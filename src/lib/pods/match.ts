@@ -158,13 +158,15 @@ export async function ensureDriverPod(d: Profile): Promise<string> {
   return podId;
 }
 
-async function seatsLeft(podId: string, seats: number): Promise<number> {
-  const { count } = await createAdminClient()
+async function seatsLeft(podId: string, seats: number, ignoreUserId?: string): Promise<number> {
+  let q = createAdminClient()
     .from("pod_members")
     .select("id", { count: "exact", head: true })
     .eq("pod_id", podId)
     .eq("role", "rider")
     .in("status", ["invited", "requested", "active"]);
+  if (ignoreUserId) q = q.neq("user_id", ignoreUserId);
+  const { count } = await q;
   return seats - (count ?? 0);
 }
 
@@ -263,12 +265,12 @@ export async function fillDriverPod(driverId: string): Promise<number> {
   return invited;
 }
 
-// Find the best pod for one rider.
-export async function matchRider(riderId: string): Promise<boolean> {
-  if ((await busyRiderIds()).has(riderId)) return false;
-  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
-  if (!r) return false;
+export type PodOption = { podId: string; driverId: string; fit: Fit };
 
+// The best few pods for a rider, best first. Doesn't invite anyone.
+export async function podOptions(riderId: string, limit = 4): Promise<PodOption[]> {
+  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
+  if (!r) return [];
   const excluded = await excludedPods(riderId);
   const drivers = await loadProfiles({ mode: "driver" });
   const users = await loadUsers([riderId, ...drivers.map((d) => d.user_id)]);
@@ -280,7 +282,7 @@ export async function matchRider(riderId: string): Promise<boolean> {
     .map((d) => ({ d, km: closestPointOnPath(home(r), [home(d), campus(d)]).km }))
     .filter((x) => x.km <= MAX_ROUTE_DISTANCE_KM + 2)
     .sort((a, b) => a.km - b.km)
-    .slice(0, 8)
+    .slice(0, 10)
     .map((x) => x.d);
 
   const fits = await Promise.all(
@@ -288,15 +290,66 @@ export async function matchRider(riderId: string): Promise<boolean> {
       const route = await ensureRoute(d);
       if (!quickFit(d, r, route.path)) return null;
       const podId = await ensureDriverPod(d);
-      if (excluded.has(podId) || (await seatsLeft(podId, d.seats)) <= 0) return null;
+      if (excluded.has(podId) || (await seatsLeft(podId, d.seats, riderId)) <= 0) return null;
       const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
-      return fit ? { d, podId, fit } : null;
+      return fit ? { podId, driverId: d.user_id, fit } : null;
     })
   );
-  const best = fits.filter((f): f is { d: Profile; podId: string; fit: Fit } => !!f).sort((a, b) => b.fit.score - a.fit.score)[0] ?? null;
+  return fits
+    .filter((f): f is PodOption => !!f)
+    .sort((a, b) => b.fit.score - a.fit.score)
+    .slice(0, limit);
+}
+
+// Invite a rider to their single best pod (used when a pod closes or a driver declines).
+export async function matchRider(riderId: string): Promise<boolean> {
+  if ((await busyRiderIds()).has(riderId)) return false;
+  const [best] = await podOptions(riderId, 1);
   if (!best) return false;
-  await invite(best.podId, best.d, r, best.fit);
+  const [d] = await loadProfiles({ userIds: [best.driverId], mode: "driver" });
+  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
+  if (!d || !r) return false;
+  await invite(best.podId, d, r, best.fit);
   return true;
+}
+
+// Rider picks a pod. Seeded drivers can't approve, so those riders go straight in.
+export async function requestToJoin(riderId: string, podId: string): Promise<{ status: "requested" | "active" } | { error: string }> {
+  const admin = createAdminClient();
+  const { data: pod } = await admin.from("pods").select("id, driver_id, status").eq("id", podId).maybeSingle();
+  if (!pod || pod.status !== "active") return { error: "That pod isn't available any more." };
+  const [d] = await loadProfiles({ userIds: [pod.driver_id], mode: "driver" });
+  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
+  if (!d || !r) return { error: "Set up your commute first." };
+  if ((await seatsLeft(podId, d.seats, riderId)) <= 0) return { error: "That pod just filled up." };
+  const users = await loadUsers([riderId, d.user_id]);
+  const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
+  if (!fit) return { error: "That pod no longer fits your schedule." };
+
+  const { data: driver } = await admin.from("users").select("auth_id").eq("id", d.user_id).single();
+  const status = driver?.auth_id ? "requested" : "active";
+  // One pod at a time: drop any other pending invites/requests.
+  await admin.from("pod_members").delete().eq("user_id", riderId).eq("role", "rider").in("status", ["invited", "requested"]).neq("pod_id", podId);
+  await admin.from("pod_members").upsert(
+    {
+      pod_id: podId,
+      user_id: riderId,
+      role: "rider",
+      status,
+      days: fit.days,
+      pickup_lat: fit.pickup.lat,
+      pickup_lng: fit.pickup.lng,
+      pickup_label: fit.pickupLabel,
+      pickup_time: fit.pickupTime,
+      detour_minutes: fit.detourMinutes,
+      drive_minutes: fit.driveMinutes,
+      transit_minutes: fit.transitMinutes,
+      score: fit.score,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "pod_id,user_id" }
+  );
+  return { status };
 }
 
 // Run after someone saves their commute. Keeps pods consistent with the new answers.
@@ -324,7 +377,7 @@ export async function rematchUser(userId: string): Promise<void> {
   } else {
     // A rider who changed schedule/home loses a pending invite (it may no longer fit).
     // Deleted rather than declined, so that pod can still be offered again if it fits.
+    // Riders then pick from their options on /pods (no auto-invite).
     await admin.from("pod_members").delete().eq("user_id", userId).eq("status", "invited");
-    await matchRider(userId);
   }
 }

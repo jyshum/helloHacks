@@ -118,7 +118,7 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
         pins={[
           ...(online
             ? requests.map((r) => ({ id: r.id, pos: { lat: r.pickup_lat, lng: r.pickup_lng }, kind: "pickup" as const }))
-            : riders.map((r) => ({ id: r.id, pos: r.pickup, kind: "rider" as const }))),
+            : riders.map((r) => ({ id: r.id, pos: r.pickup, kind: "rider" as const, name: r.name, photo: r.photo }))),
           ...(dest ? [{ id: "dest", pos: dest, kind: "dropoff" as const }] : []),
         ]}
         fit={online && origin && dest ? [origin, dest] : firstFix ? [firstFix] : null}
