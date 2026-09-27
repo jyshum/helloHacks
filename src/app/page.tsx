@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Car, ShieldCheck, Timer, Users } from "lucide-react";
+import Disclaimer from "@/components/Disclaimer";
 
 export default function Landing() {
   return (
@@ -38,6 +39,9 @@ export default function Landing() {
           Get started <ArrowRight size={20} className="transition group-hover:translate-x-1" aria-hidden />
         </Link>
         <p className="mt-4 text-center text-xs text-muted/80">Not affiliated with UBC</p>
+        <div className="mt-3 flex justify-center">
+          <Disclaimer />
+        </div>
       </div>
     </main>
   );
