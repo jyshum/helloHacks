@@ -15,6 +15,7 @@ export type MenuUser = {
   role: Role;
   rating_avg: number;
   license_verified: boolean;
+  isAdmin?: boolean;
 };
 
 // Uber-style: avatar button top-left opens a side drawer.
@@ -31,6 +32,16 @@ export default function ProfileMenu({
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Admins see how many licenses are waiting, refreshed each time the menu opens.
+  const [pendingReviews, setPendingReviews] = useState<number | null>(null);
+  useEffect(() => {
+    if (!open || !me.isAdmin) return;
+    fetch("/api/admin/licenses?count=1", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((b) => setPendingReviews(b.pending ?? 0))
+      .catch(() => {});
+  }, [open, me.isAdmin]);
 
   async function signOut() {
     await createClient().auth.signOut();
@@ -64,6 +75,15 @@ export default function ProfileMenu({
             <nav className="flex flex-col py-2">
               <MenuItem href="/map" label="Home" icon="⌂" onClick={() => setOpen(false)} />
               <MenuItem href="/trips" label="Your trips" icon="⏱" onClick={() => setOpen(false)} />
+              {me.isAdmin && (
+                <Link href="/admin" onClick={() => setOpen(false)} className="flex items-center gap-4 px-5 py-4 font-medium text-ink hover:bg-paper">
+                  <span className="w-6 text-center text-lg">🛡️</span>
+                  <span className="flex-1">Review licenses</span>
+                  {!!pendingReviews && (
+                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">{pendingReviews}</span>
+                  )}
+                </Link>
+              )}
               <MenuItem href="/driver-verify" label="License & car" icon="🪪" onClick={() => setOpen(false)} />
               {onSwitchMode && (
                 <button

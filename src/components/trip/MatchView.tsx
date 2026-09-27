@@ -179,6 +179,10 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
         <div className="mt-2">
           <SharedBadge a={driver} b={rider} />
         </div>
+        {viewer === "rider" && vehicle?.photo_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={vehicle.photo_url} alt={`${driver.full_name}'s car`} className="mt-3 h-36 w-full rounded-2xl object-cover" />
+        )}
 
         {/* Actions */}
         {!ended && !done && request.status !== "pending" && (

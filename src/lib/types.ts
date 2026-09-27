@@ -27,6 +27,7 @@ export interface Vehicle {
   color: string;
   seat_capacity: number;
   is_ev: boolean;
+  photo_url?: string | null; // car photo with plate visible
 }
 
 export interface Ride {
@@ -58,4 +59,14 @@ export interface Rating {
   ratee_id: string;
   score: number;
   comment: string | null;
+}
+
+// Manual driver-license review by the hoppedIn team.
+export interface LicenseReview {
+  id: string;
+  user_id: string;
+  status: "pending" | "approved" | "rejected";
+  reject_reason: string | null;
+  created_at: string;
+  reviewed_at: string | null;
 }

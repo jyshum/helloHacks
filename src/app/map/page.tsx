@@ -1,6 +1,7 @@
 import Home from "@/components/app/Home";
 import { requireProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function MapPage() {
         role: me.role,
         rating_avg: Number(me.rating_avg ?? 5),
         license_verified: !!me.license_verified,
+        isAdmin: isAdmin(me),
         faculty: me.faculty,
         year: me.year,
         seatCapacity: vehicle?.seat_capacity ?? 3,
