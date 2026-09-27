@@ -12,7 +12,7 @@ const QUICK_REASONS = ["Photo blurry or unreadable", "Face doesn't match license
 
 type Data = { pending: AdminReview[]; recent: AdminReview[] };
 
-export default function AdminReviews({ initial }: { initial: Data }) {
+export default function AdminReviews({ initial, children }: { initial: Data; children?: React.ReactNode }) {
   const [data, setData] = useState<Data>(initial);
   const [zoom, setZoom] = useState<string | null>(null);
 
@@ -71,6 +71,8 @@ export default function AdminReviews({ initial }: { initial: Data }) {
           </div>
         </section>
       )}
+
+      {children}
 
       {zoom && (
         <button onClick={() => setZoom(null)} className="fixed inset-0 z-50 flex items-center justify-center bg-ink/90 p-4" aria-label="Close">
