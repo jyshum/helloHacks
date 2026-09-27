@@ -84,7 +84,7 @@ export default function Disclaimer() {
           <p>Pod chat is for coordinating rides. You agree not to post harassment, hate speech, threats, sexual content, spam, or anyone&apos;s private information. hoppedIn may remove content, pause, or close accounts that break these rules. Users can report messages, and reported content may be reviewed by the hoppedIn team.</p>
 
           <h3 className="mt-5 font-bold text-ubc">9. Your information</h3>
-          <p>We collect the information you give us (name, UBC email, faculty, year, photo, home area, schedule, vehicle and licence details) and trip data (pickups, drop-offs, live location during trips, ratings, and payments). We use it only to run hoppedIn: matching you with a pod, running trips, keeping users safe, and processing payments. Licence photos are private and only visible to the hoppedIn review team. We do not sell your information. You can ask us to delete your account and data at any time by contacting [CONTACT EMAIL].</p>
+          <p>We collect the information you give us (name, UBC email, faculty, year, photo, home area, schedule, vehicle and licence details) and trip data (pickups, drop-offs, live location during trips, ratings, and payments). We use it only to run hoppedIn: matching you with a pod, running trips, keeping users safe, and processing payments. Licence photos are private and only visible to the hoppedIn review team. We do not sell your information. You can ask us to delete your account and data at any time by contacting <a className="underline underline-offset-2" href="mailto:hoppedin@gmail.com">hoppedin@gmail.com</a>.</p>
 
           <h3 className="mt-5 font-bold text-ubc">10. No guarantees</h3>
           <p>hoppedIn is provided &quot;as is.&quot; We do not guarantee that you will be matched, that a driver will show up, that rides will be on time, or that the app will always be available or error-free. Plan a backup way to get to campus, especially for exams and important commitments.</p>
@@ -99,7 +99,7 @@ export default function Disclaimer() {
           <p>We may update these terms. If we make significant changes, we will let you know in the app. Continuing to use hoppedIn means you accept the updated terms.</p>
 
           <h3 className="mt-5 font-bold text-ubc">14. Contact</h3>
-          <p className="mb-3">Questions, reports, or data requests: [CONTACT EMAIL]</p>
+          <p className="mb-3">Questions, reports, or data requests: <a className="underline underline-offset-2" href="mailto:hoppedin@gmail.com">hoppedin@gmail.com</a></p>
         </article>
       </dialog>
     </>
