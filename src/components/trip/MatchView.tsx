@@ -12,9 +12,9 @@ import BackButton from "@/components/app/BackButton";
 import { useMyLocation, usePresence } from "@/components/app/hooks";
 import Avatar from "@/components/Avatar";
 import SharedBadge from "@/components/SharedBadge";
-import GasBreakdown from "./GasBreakdown";
+import FareBreakdown from "./FareBreakdown";
 import { etaMinutes, haversineKm, type LatLng } from "@/lib/geo";
-import { formatCents } from "@/lib/pricing";
+import { fareBetween, formatCents } from "@/lib/pricing";
 import { prettyTime } from "@/lib/pods/time";
 import type { TripBundle } from "@/lib/trip";
 
@@ -285,7 +285,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
         {request.estimated_cost_cents != null && (
           <>
             <button onClick={() => setShowCost((s) => !s)} className="mt-4 flex w-full items-center justify-between rounded-2xl bg-ink/[0.04] px-4 py-3 text-sm">
-              <span className="text-muted">Gas contribution</span>
+              <span className="text-muted">Ride price</span>
               <span className="flex items-center gap-1 font-bold text-ink">
                 {formatCents(request.estimated_cost_cents)}
                 {showCost ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
@@ -293,7 +293,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
             </button>
             {showCost && (
               <div className="mt-2">
-                <GasBreakdown detourKm={Number(request.detour_km ?? 0)} totalCents={request.estimated_cost_cents} />
+                <FareBreakdown fare={fareBetween({ lat: request.pickup_lat, lng: request.pickup_lng }, { lat: request.dropoff_lat, lng: request.dropoff_lng })} />
               </div>
             )}
           </>

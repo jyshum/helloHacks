@@ -10,7 +10,8 @@ import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
 import { prettyTime } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
-import { formatCents } from "@/lib/pricing";
+import { formatCents, type Fare } from "@/lib/pricing";
+import FareBreakdown from "@/components/trip/FareBreakdown";
 import type { LatLng } from "@/lib/geo";
 
 const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -37,7 +38,7 @@ type Preview = {
     detourMinutes: number;
   };
   routeStart: LatLng;
-  shareCents: number;
+  fare: Fare;
   schedule: {
     day: number;
     state: "fit" | "off" | "none";
@@ -73,6 +74,7 @@ export default function PodPreview({
   const [error, setError] = useState<string | null>(null);
   const [day, setDay] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
+  const [showFare, setShowFare] = useState(false);
   // Slide down first, then unmount.
   const close = () => {
     setClosing(true);
@@ -208,7 +210,14 @@ export default function PodPreview({
                       title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
                       sub={today.youNeed && today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
                     />
-                    <Line icon={<WalletIcon size={18} aria-hidden />} title={`${formatCents(data.shareCents)} a ride`} sub="Gas share, paid from your wallet on arrival" />
+                    <button onClick={() => setShowFare((s) => !s)} className="w-full text-left" aria-expanded={showFare}>
+                      <Line icon={<WalletIcon size={18} aria-hidden />} title={`${formatCents(data.fare.total)} a ride`} sub={showFare ? "Paid from your wallet on arrival" : "Tap for breakdown"} />
+                    </button>
+                    {showFare && (
+                      <div className="pb-3">
+                        <FareBreakdown fare={data.fare} />
+                      </div>
+                    )}
                     <p className="py-3 text-[13px] text-muted">
                       {today.riders ? `${today.riders + 1} riders this day` : "Just you and the driver this day"}
                     </p>

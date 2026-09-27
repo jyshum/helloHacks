@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { calculateDetour, isValidMatch } from "@/lib/matching";
-import { calculateGasContribution } from "@/lib/pricing";
+import { fareBetween } from "@/lib/pricing";
 import { haversineKm, type LatLng } from "@/lib/geo";
 
 // Rides that left more than this long ago are treated as stale and hidden.
@@ -86,7 +86,7 @@ export async function quoteRides(
         departureTime: r.departure_time,
         detourMinutes,
         detourKm,
-        estimatedCostCents: calculateGasContribution(detourKm),
+        estimatedCostCents: fareBetween(pickup, { lat: r.destination_lat, lng: r.destination_lng }).total,
         valid: isValidMatch(detourMinutes),
       };
     })

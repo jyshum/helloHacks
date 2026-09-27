@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Star } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { formatCents } from "@/lib/pricing";
+import { driverShareOf, formatCents } from "@/lib/pricing";
 import type { TripBundle } from "@/lib/trip";
 
 export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewer: "driver" | "rider" }) {
@@ -33,7 +33,7 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
     router.refresh();
   }
 
-  const cents = request.estimated_cost_cents ?? 0;
+  const cents = viewer === "rider" ? request.estimated_cost_cents ?? 0 : driverShareOf(request.estimated_cost_cents ?? 0);
 
   return (
     <main className="screen flex flex-col">
@@ -48,7 +48,7 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
       {request.estimated_cost_cents != null && (
       <div className="card mt-6 flex items-center justify-between p-5">
         <div>
-          <p className="text-sm text-muted">Gas contribution</p>
+          <p className="text-sm text-muted">{viewer === "rider" ? "Ride price" : "You earned"}</p>
           <p className="font-heading text-3xl font-bold text-ubc">{formatCents(cents)}</p>
         </div>
         <span className="flex items-center gap-1 rounded-full bg-green/10 px-3 py-1 text-sm font-semibold text-green">

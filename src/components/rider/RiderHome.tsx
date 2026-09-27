@@ -356,7 +356,7 @@ function ChooseRide({
             <button onClick={request} disabled={!chosen || busy} className="btn-ubc w-full py-4 text-lg">
               {busy ? "Requesting…" : chosen ? `Request ${chosen.driverName.split(" ")[0]} · ${formatCents(chosen.estimatedCostCents)}` : "Pick a driver"}
             </button>
-            <p className="mt-2 text-center text-[11px] text-muted">Gas contribution only · {PRICING_FORMULA}</p>
+            <p className="mt-2 text-center text-[11px] text-muted">{PRICING_FORMULA}</p>
           </div>
         )}
       </div>

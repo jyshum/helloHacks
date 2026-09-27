@@ -67,7 +67,7 @@ export default function RidersForYou({ podId, seatsLeft }: { podId: string; seat
                   <p className="truncate font-semibold text-ink">{r.full_name.split(" ")[0]}</p>
                   <p className="truncate text-[13px] text-muted">{[r.faculty?.split(" ")[0], r.year && `Y${r.year}`, r.area].filter(Boolean).join(" · ")}</p>
                 </div>
-                <span className="rounded-full bg-green/10 px-3 py-1.5 text-sm font-semibold text-green">+{formatCents(r.shareCents)}</span>
+                <span className="rounded-full bg-green/10 px-3 py-1.5 text-sm font-semibold text-green">+{formatCents(r.earnCents)}</span>
               </div>
 
               <div className="mt-3 flex items-center justify-between gap-2">

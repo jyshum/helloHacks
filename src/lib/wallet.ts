@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
+import { driverShareOf } from "@/lib/pricing";
 
 // Demo wallet. All money here is fake, but it moves exactly like the real thing would:
 // every ride charges the rider and pays the driver, once, from a ledger.
@@ -38,8 +39,8 @@ export async function balanceOf(userId: string): Promise<number> {
   return (data ?? []).reduce((s, e) => s + e.amount_cents, 0);
 }
 
-// Rider pays driver for one ride. Safe to call more than once: the ledger's unique index
-// (request_id, kind) means a ride is only ever charged once.
+// Rider pays the full price; the driver gets the driver fee + gas (company fee and tax stay with hoppedIn).
+// Safe to call more than once: the ledger's unique index (request_id, kind) means a ride is only charged once.
 export async function settleRequest(requestId: string): Promise<void> {
   const admin = createAdminClient();
   const { data: rr } = await admin
@@ -54,6 +55,6 @@ export async function settleRequest(requestId: string): Promise<void> {
   if (done?.length) return;
   await admin.from("wallet_entries").insert([
     { user_id: rr.rider_id, amount_cents: -cents, kind: "ride", request_id: requestId, other_user_id: driverId, label: `Ride to ${rr.dropoff_label ?? "campus"}` },
-    { user_id: driverId, amount_cents: cents, kind: "earning", request_id: requestId, other_user_id: rr.rider_id, label: "Gas share" },
+    { user_id: driverId, amount_cents: driverShareOf(cents), kind: "earning", request_id: requestId, other_user_id: rr.rider_id, label: "Driver fee + gas" },
   ]);
 }

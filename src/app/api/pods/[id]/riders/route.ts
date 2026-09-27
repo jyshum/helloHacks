@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 import { addRider, dayStates, riderOptions, type DayState } from "@/lib/pods/match";
-import { podShareFor } from "@/lib/pricing";
+import { fareBetween } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -19,7 +19,7 @@ export type RiderCard = {
   pickupTime: string;
   pickupLabel: string;
   detourMinutes: number;
-  shareCents: number;
+  earnCents: number; // what the driver gets per ride (driver fee + gas)
 };
 
 async function asDriver(podId: string) {
@@ -51,7 +51,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       pickupTime: fit.pickupTime,
       pickupLabel: fit.pickupLabel,
       detourMinutes: fit.detourMinutes,
-      shareCents: podShareFor(fit.pickup, campus),
+      earnCents: (({ driver, gas }) => driver + gas)(fareBetween(fit.pickup, campus)),
     };
   });
   return NextResponse.json({ riders });
