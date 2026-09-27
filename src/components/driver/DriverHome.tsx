@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { ChevronRight, GraduationCap } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import { useMyLocation } from "@/components/app/hooks";
@@ -133,7 +134,10 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
             online ? "bg-green text-white" : "bg-white text-ink"
           }`}
         >
-          {online ? "● Online" : "Offline"}
+          <span className="flex items-center gap-1.5">
+            {online && <span className="h-2 w-2 rounded-full bg-white" />}
+            {online ? "Online" : "Offline"}
+          </span>
         </span>
       </div>
 
@@ -158,7 +162,7 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
                 {!me.license_verified && (
                   <Link href="/driver-verify" className="mt-4 flex items-center justify-between rounded-2xl bg-frost px-4 py-3 text-sm">
                     <span className="font-semibold text-ubc">Verify your license so riders trust you</span>
-                    <span className="text-ubc">→</span>
+                    <ChevronRight size={18} className="text-ubc" aria-hidden />
                   </Link>
                 )}
               </>
@@ -187,7 +191,7 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
                 <span className="font-heading font-semibold">Pick up {accepted.rider?.full_name}</span>
                 <span className="block text-xs text-white/70">{accepted.pickup_label}</span>
               </span>
-              <span>→</span>
+              <ChevronRight size={20} aria-hidden />
             </Link>
           )}
 
@@ -273,7 +277,7 @@ function GoOnlinePicker({
             onClick={() => setDest(p)}
             className={`row rounded-2xl px-3 ${dest.label === p.label ? "bg-frost ring-2 ring-ubc" : ""}`}
           >
-            <span className="row-icon">🎓</span>
+            <span className="row-icon"><GraduationCap size={18} aria-hidden /></span>
             <span className="font-medium text-ink">{p.label}</span>
           </button>
         ))}

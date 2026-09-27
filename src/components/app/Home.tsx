@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { Car, ChevronRight, MapPin } from "lucide-react";
 import RiderHome from "@/components/rider/RiderHome";
 import DriverHome, { type DriverMe } from "@/components/driver/DriverHome";
 
@@ -58,13 +59,13 @@ function ModeChooser({ name, onChoose }: { name: string; onChoose: (m: Mode) => 
           className="group flex items-center gap-4 rounded-card border-2 border-sky bg-white p-5 text-left shadow-soft transition hover:-translate-y-0.5"
         >
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky/10 text-sky">
-            <PinIcon />
+            <MapPin size={26} aria-hidden />
           </span>
           <span className="flex-1">
             <span className="block font-heading text-lg font-bold text-ubc">I need a ride</span>
             <span className="block text-sm text-muted">Nearby drivers can see your pickup and profile.</span>
           </span>
-          <span className="text-sky">→</span>
+          <ChevronRight size={20} className="text-sky" aria-hidden />
         </button>
 
         <button
@@ -72,32 +73,15 @@ function ModeChooser({ name, onChoose }: { name: string; onChoose: (m: Mode) => 
           className="group flex items-center gap-4 rounded-card bg-ubc p-5 text-left text-white shadow-lift transition hover:-translate-y-0.5"
         >
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-            <CarIcon />
+            <Car size={26} aria-hidden />
           </span>
           <span className="flex-1">
             <span className="block font-heading text-lg font-bold">I&apos;m driving</span>
             <span className="block text-sm text-white/70">Riders on your way can see your route.</span>
           </span>
-          <span>→</span>
+          <ChevronRight size={20} aria-hidden />
         </button>
       </div>
     </main>
-  );
-}
-
-function CarIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 17h14M6 17v2M18 17v2M3 13l2-6a2 2 0 0 1 2-1.4h10A2 2 0 0 1 19 7l2 6v4H3z" />
-      <circle cx="7.5" cy="13.5" r="1" /><circle cx="16.5" cy="13.5" r="1" />
-    </svg>
-  );
-}
-
-function PinIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="10" r="2.5" />
-    </svg>
   );
 }

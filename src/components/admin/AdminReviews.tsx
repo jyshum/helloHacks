@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useCallback, useEffect, useState } from "react";
+import { FileText } from "lucide-react";
 import BackButton from "@/components/app/BackButton";
 import Avatar from "@/components/Avatar";
 import type { AdminReview } from "@/lib/reviews";
@@ -121,8 +122,8 @@ function ReviewCard({ r, onDone, onZoom }: { r: AdminReview; onDone: () => void;
       </div>
       {r.recordUrl &&
         (r.recordIsPdf ? (
-          <a href={r.recordUrl} target="_blank" rel="noreferrer" className="mt-2 block rounded-xl bg-frost px-3 py-2 text-sm font-semibold text-blue">
-            📄 Open ICBC driving record (PDF)
+          <a href={r.recordUrl} target="_blank" rel="noreferrer" className="mt-2 flex items-center gap-2 rounded-xl bg-frost px-3 py-2 text-sm font-semibold text-blue">
+            <FileText size={16} aria-hidden /> Open ICBC driving record (PDF)
           </a>
         ) : (
           <div className="mt-2">

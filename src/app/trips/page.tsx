@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Car, User } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/profile";
 import BackButton from "@/components/app/BackButton";
@@ -48,7 +49,7 @@ export default async function TripsPage() {
           const s = STATUS[t.status] ?? STATUS.pending;
           return (
             <Link key={`${t.as}-${t.id}`} href={`/match/${t.id}`} className="card flex items-center gap-4 p-4">
-              <span className="row-icon">{t.as === "rider" ? "🧍" : "🚗"}</span>
+              <span className="row-icon">{t.as === "rider" ? <User size={18} aria-hidden /> : <Car size={18} aria-hidden />}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-heading font-semibold text-ink">{t.dropoff_label}</p>
                 <p className="truncate text-sm text-muted">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Star } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { formatCents } from "@/lib/pricing";
 import type { TripBundle } from "@/lib/trip";
@@ -37,7 +38,9 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
   return (
     <main className="screen flex flex-col">
       <div className="pt-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green text-3xl text-white">✓</div>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green text-white">
+          <Check size={32} strokeWidth={2.5} aria-hidden />
+        </div>
         <h1 className="mt-4 text-3xl font-bold text-ubc">You made it!</h1>
         <p className="mt-1 text-muted">{request.pickup_label} → {request.dropoff_label}</p>
       </div>
@@ -47,8 +50,9 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
           <p className="text-sm text-muted">Gas contribution</p>
           <p className="font-heading text-3xl font-bold text-ubc">{formatCents(cents)}</p>
         </div>
-        <span className="rounded-full bg-green/10 px-3 py-1 text-sm font-semibold text-green">
-          {viewer === "rider" ? "Paid" : "Received"} ✓
+        <span className="flex items-center gap-1 rounded-full bg-green/10 px-3 py-1 text-sm font-semibold text-green">
+          <Check size={14} strokeWidth={2.5} aria-hidden />
+          {viewer === "rider" ? "Paid" : "Received"}
         </span>
       </div>
 
@@ -65,9 +69,9 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
               aria-checked={score === n}
               aria-label={`${n} star${n > 1 ? "s" : ""}`}
               onClick={() => setScore(n)}
-              className={`text-4xl transition ${n <= score ? "text-sky" : "text-line"} hover:scale-110`}
+              className={`transition ${n <= score ? "text-sky" : "text-line"} hover:scale-110`}
             >
-              ★
+              <Star size={36} fill="currentColor" strokeWidth={0} aria-hidden />
             </button>
           ))}
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BadgeCheck, Car, GraduationCap, MessageCircle, User as UserIcon } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/profile";
 import Avatar from "@/components/Avatar";
@@ -53,7 +54,9 @@ export default async function ProfilePage({ params }: { params: { id: string } }
           <h1 className="mt-3 font-heading text-3xl font-bold">{u.full_name}</h1>
           <p className="text-white/75">{[u.faculty, u.year && `Year ${u.year}`].filter(Boolean).join(" · ") || "UBC student"}</p>
           {u.license_verified && (
-            <span className="mt-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">License verified ✓</span>
+            <span className="mt-2 flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+              <BadgeCheck size={14} aria-hidden /> License verified
+            </span>
           )}
         </div>
       </div>
@@ -72,9 +75,9 @@ export default async function ProfilePage({ params }: { params: { id: string } }
         )}
 
         <div className="card mt-4 divide-y divide-line px-5">
-          <InfoRow icon="🎓" label="UBC verified" value={isMe ? u.ubc_email : "UBC email confirmed"} />
-          <InfoRow icon="💬" label="Ride vibe" value={CHAT[u.chat_preference] ?? "Easygoing"} />
-          <InfoRow icon={drives ? "🚗" : "🧍"} label="Rides as" value={u.role === "both" ? "Driver & rider" : u.role === "driver" ? "Driver" : "Rider"} />
+          <InfoRow icon={<GraduationCap size={20} aria-hidden />} label="UBC verified" value={isMe ? u.ubc_email : "UBC email confirmed"} />
+          <InfoRow icon={<MessageCircle size={20} aria-hidden />} label="Ride vibe" value={CHAT[u.chat_preference] ?? "Easygoing"} />
+          <InfoRow icon={drives ? <Car size={20} aria-hidden /> : <UserIcon size={20} aria-hidden />} label="Rides as" value={u.role === "both" ? "Driver & rider" : u.role === "driver" ? "Driver" : "Rider"} />
         </div>
 
         {drives && (
@@ -84,7 +87,7 @@ export default async function ProfilePage({ params }: { params: { id: string } }
               <div className="mt-2 flex items-center justify-between">
                 <div>
                   <p className="font-heading text-lg font-semibold">{v.color} {v.make_model}</p>
-                  <p className="text-sm text-muted">{v.seat_capacity} seats{v.is_ev ? " · Electric ⚡" : ""}</p>
+                  <p className="text-sm text-muted">{v.seat_capacity} seats{v.is_ev ? " · Electric" : ""}</p>
                 </div>
                 <span className="rounded-lg border-2 border-ubc px-2 py-1 font-mono text-sm font-bold tracking-wider text-ubc">{v.license_plate}</span>
               </div>
@@ -141,10 +144,10 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-4 py-3">
-      <span className="text-lg">{icon}</span>
+      <span className="text-ubc">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs text-muted">{label}</p>
         <p className="truncate font-medium text-ink">{value}</p>

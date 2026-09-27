@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { FACULTIES, isAllowedEmail, allowedDomains } from "@/lib/auth";
 
 export default function SignupPage() {
@@ -47,7 +48,9 @@ function SignupForm() {
 
   return (
     <main className="screen">
-      <Link href="/" className="text-sm text-muted">← Back</Link>
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted">
+        <ArrowLeft size={16} aria-hidden /> Back
+      </Link>
       <div className="mt-4 mb-6">
         <h1 className="text-3xl font-bold text-ubc">Create your account</h1>
         <p className="mt-1 text-muted">

@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BadgeCheck, Camera, Check, FileText } from "lucide-react";
 import BackButton from "@/components/app/BackButton";
 import type { LicenseReview, Vehicle } from "@/lib/types";
 
@@ -75,8 +76,8 @@ export default function DriverVerify({ licenseVerified, review: initialReview, v
         </div>
 
         {verified && (
-          <p className="mt-3 rounded-2xl bg-green/10 px-4 py-3 text-sm font-semibold text-green">
-            License verified by the hoppedIn team ✓
+          <p className="mt-3 flex items-center gap-2 rounded-2xl bg-green/10 px-4 py-3 text-sm font-semibold text-green">
+            <BadgeCheck size={18} aria-hidden /> License verified by the hoppedIn team
           </p>
         )}
 
@@ -180,7 +181,13 @@ function FilePick({
   return (
     <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-line p-3 hover:bg-paper">
       <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-frost text-xl text-ubc">
-        {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : fileName ? "📄" : "📷"}
+        {preview ? (
+          <img src={preview} alt="" className="h-full w-full object-cover" />
+        ) : fileName ? (
+          <FileText size={22} aria-hidden />
+        ) : (
+          <Camera size={22} aria-hidden />
+        )}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block font-medium text-ink">{label}</span>
@@ -207,7 +214,7 @@ function StepDot({ n, state }: { n: number; state: "done" | "wait" | "todo" }) {
   const cls = state === "done" ? "bg-green text-white" : state === "wait" ? "bg-blue text-white" : "bg-frost text-ubc";
   return (
     <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${cls}`}>
-      {state === "done" ? "✓" : state === "wait" ? "…" : n}
+      {state === "done" ? <Check size={16} strokeWidth={3} aria-hidden /> : state === "wait" ? "…" : n}
     </span>
   );
 }
