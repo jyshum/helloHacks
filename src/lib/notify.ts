@@ -45,7 +45,14 @@ function vapidConfigured(): boolean {
 // Server-only. userIds are users.id (not auth ids). Must never throw.
 export async function notify(userIds: string[], notice: Notice): Promise<void> {
   try {
-    const ids = Array.from(new Set(userIds.filter(Boolean)));
+    // Only real sign-ups (they have a login). Seeded demo users have made-up UBC
+    // addresses that could belong to real students, so they must never get email or push.
+    const { data: real } = await createAdminClient()
+      .from("users")
+      .select("id")
+      .in("id", Array.from(new Set(userIds.filter(Boolean))))
+      .not("auth_id", "is", null);
+    const ids = (real ?? []).map((u) => u.id as string);
     if (!ids.length) return;
     const pushed = await sendPush(ids, notice);
     // Email anyone the push didn't reach, except for chat (too noisy for email).

@@ -38,9 +38,11 @@ export default function CommuteOnboarding({
     existing ? { lat: existing.home_lat, lng: existing.home_lng, label: existing.home_area ?? "Saved home" } : null
   );
   const [days, setDays] = useState<Weekday[]>(existing?.days ?? []);
-  const [arriveBy, setArriveBy] = useState(existing?.arrive_by?.slice(0, 5) ?? "09:00");
-  const [perDay, setPerDay] = useState<Partial<Record<Weekday, string>>>(existing?.day_times ?? {});
-  const [showPerDay, setShowPerDay] = useState(Object.keys(existing?.day_times ?? {}).length > 0);
+  // One arrival time per weekday. Saved as a default (arrive_by) + overrides (day_times).
+  const base = existing?.arrive_by?.slice(0, 5) ?? "09:00";
+  const [times, setTimes] = useState<Record<Weekday, string>>(() =>
+    Object.fromEntries(DAYS.map((d) => [d, existing?.day_times?.[d] ?? base])) as Record<Weekday, string>
+  );
   const [campus, setCampus] = useState(CAMPUS_SPOTS.find((c) => c.label === existing?.campus_label) ?? CAMPUS_SPOTS[0]);
   const [seats, setSeats] = useState(existing?.seats ?? 3);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +62,7 @@ export default function CommuteOnboarding({
         campus: { lat: campus.lat, lng: campus.lng },
         campus_label: campus.label,
         days,
-        arrive_by: arriveBy,
-        day_times: showPerDay ? perDay : {},
+        ...splitTimes(days, times),
         seats,
       }),
     });
@@ -151,50 +152,50 @@ export default function CommuteOnboarding({
       {step === "schedule" && (
         <section className="mt-8 flex flex-1 flex-col">
           <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">When do you need to be on campus?</h1>
-          <p className="mt-2 text-muted">Pick your usual days and when your first class starts.</p>
+          <p className="mt-2 text-muted">Tick your campus days and when your first class starts each day.</p>
 
-          <p className="label mt-6">Days</p>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="mt-6 flex flex-col gap-2">
             {DAYS.map((d) => {
               const on = days.includes(d);
               return (
-                <button
-                  key={d}
-                  onClick={() => setDays(on ? days.filter((x) => x !== d) : [...days, d].sort())}
-                  className={`rounded-2xl py-3 font-heading font-semibold transition ${on ? "bg-ubc text-white" : "bg-white text-ink shadow-soft"}`}
-                  aria-pressed={on}
-                >
-                  {WEEKDAY_LABELS[d]}
-                </button>
+                <div key={d} className={`flex items-center gap-3 rounded-2xl p-2 pl-3 transition ${on ? "bg-white shadow-soft" : "bg-line/40"}`}>
+                  <button
+                    onClick={() => setDays(on ? days.filter((x) => x !== d) : [...days, d].sort())}
+                    className={`flex w-[92px] shrink-0 items-center gap-2 font-heading font-semibold ${on ? "text-ubc" : "text-muted"}`}
+                    aria-pressed={on}
+                    aria-label={`${WEEKDAY_LABELS[d]} ${on ? "on" : "off"}`}
+                  >
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-md border-2 ${on ? "border-ubc bg-ubc text-white" : "border-muted/40"}`}>
+                      {on && <Check size={14} strokeWidth={3} aria-hidden />}
+                    </span>
+                    {WEEKDAY_LABELS[d]}
+                  </button>
+                  {on ? (
+                    <select
+                      aria-label={`Arrive by on ${WEEKDAY_LABELS[d]}`}
+                      className="input flex-1 py-2.5"
+                      value={times[d]}
+                      onChange={(e) => setTimes({ ...times, [d]: e.target.value })}
+                    >
+                      {TIMES.map((t) => <option key={t} value={t}>{pretty(t)}</option>)}
+                    </select>
+                  ) : (
+                    <span className="flex-1 py-2.5 text-sm text-muted">Not on campus</span>
+                  )}
+                </div>
               );
             })}
           </div>
-
-          <label className="label mt-6" htmlFor="arrive">Arrive on campus by</label>
-          <select id="arrive" className="input text-lg" value={arriveBy} onChange={(e) => setArriveBy(e.target.value)}>
-            {TIMES.map((t) => <option key={t} value={t}>{pretty(t)}</option>)}
-          </select>
-
           {days.length > 1 && (
-            <button onClick={() => setShowPerDay(!showPerDay)} className="mt-3 self-start text-sm font-semibold text-blue">
-              {showPerDay ? "Same time every day" : "Different time on some days?"}
+            <button
+              onClick={() => {
+                const t = times[days[0]];
+                setTimes(Object.fromEntries(DAYS.map((d) => [d, t])) as Record<Weekday, string>);
+              }}
+              className="mt-2 self-start text-sm font-semibold text-blue"
+            >
+              Use {pretty(times[days[0]])} for every day
             </button>
-          )}
-          {showPerDay && (
-            <div className="mt-2 flex flex-col gap-2">
-              {days.map((d) => (
-                <div key={d} className="flex items-center gap-3">
-                  <span className="w-12 font-semibold text-ink">{WEEKDAY_LABELS[d]}</span>
-                  <select
-                    className="input py-2"
-                    value={perDay[d] ?? arriveBy}
-                    onChange={(e) => setPerDay({ ...perDay, [d]: e.target.value })}
-                  >
-                    {TIMES.map((t) => <option key={t} value={t}>{pretty(t)}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
           )}
 
           <label className="label mt-6" htmlFor="campus">Where on campus?</label>
@@ -347,4 +348,13 @@ function HomePicker({ value, onChange }: { value: Home | null; onChange: (h: Hom
       </button>
     </div>
   );
+}
+
+// Most common time becomes the default; other days are saved as overrides.
+function splitTimes(days: Weekday[], times: Record<Weekday, string>) {
+  const counts = new Map<string, number>();
+  days.forEach((d) => counts.set(times[d], (counts.get(times[d]) ?? 0) + 1));
+  const arrive_by = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "09:00";
+  const day_times = Object.fromEntries(days.filter((d) => times[d] !== arrive_by).map((d) => [d, times[d]]));
+  return { arrive_by, day_times };
 }

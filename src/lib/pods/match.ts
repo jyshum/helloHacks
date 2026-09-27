@@ -241,13 +241,17 @@ export async function fillDriverPod(driverId: string): Promise<number> {
     .map((x) => x.r);
 
   const users = await loadUsers([d.user_id, ...promising.map((r) => r.user_id)]);
-  const fits: { r: Profile; fit: Fit }[] = [];
-  for (const r of promising) {
-    if ((await excludedPods(r.user_id)).has(podId)) continue;
-    const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(r.user_id)!);
-    if (fit) fits.push({ r, fit });
-  }
-  fits.sort((a, b) => b.fit.score - a.fit.score);
+  const fits = (
+    await Promise.all(
+      promising.map(async (r) => {
+        if ((await excludedPods(r.user_id)).has(podId)) return null;
+        const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(r.user_id)!);
+        return fit ? { r, fit } : null;
+      })
+    )
+  )
+    .filter((x): x is { r: Profile; fit: Fit } => !!x)
+    .sort((a, b) => b.fit.score - a.fit.score);
 
   let invited = 0;
   for (const { r, fit } of fits) {
@@ -269,16 +273,27 @@ export async function matchRider(riderId: string): Promise<boolean> {
   const drivers = await loadProfiles({ mode: "driver" });
   const users = await loadUsers([riderId, ...drivers.map((d) => d.user_id)]);
 
-  let best: { d: Profile; podId: string; fit: Fit } | null = null;
-  for (const d of drivers) {
-    if (d.user_id === riderId) continue;
-    const route = await ensureRoute(d);
-    if (!quickFit(d, r, route.path)) continue;
-    const podId = await ensureDriverPod(d);
-    if (excluded.has(podId) || (await seatsLeft(podId, d.seats)) <= 0) continue;
-    const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
-    if (fit && (!best || fit.score > best.fit.score)) best = { d, podId, fit };
-  }
+  // Cheap filters first (no Google calls): shared days + near the straight line
+  // from the driver's home to campus. Only the closest few get real route checks.
+  const shortlist = drivers
+    .filter((d) => d.user_id !== riderId && sharedDays(d, r).days.length > 0)
+    .map((d) => ({ d, km: closestPointOnPath(home(r), [home(d), campus(d)]).km }))
+    .filter((x) => x.km <= MAX_ROUTE_DISTANCE_KM + 2)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, 8)
+    .map((x) => x.d);
+
+  const fits = await Promise.all(
+    shortlist.map(async (d) => {
+      const route = await ensureRoute(d);
+      if (!quickFit(d, r, route.path)) return null;
+      const podId = await ensureDriverPod(d);
+      if (excluded.has(podId) || (await seatsLeft(podId, d.seats)) <= 0) return null;
+      const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
+      return fit ? { d, podId, fit } : null;
+    })
+  );
+  const best = fits.filter((f): f is { d: Profile; podId: string; fit: Fit } => !!f).sort((a, b) => b.fit.score - a.fit.score)[0] ?? null;
   if (!best) return false;
   await invite(best.podId, best.d, r, best.fit);
   return true;
