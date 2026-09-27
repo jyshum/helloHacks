@@ -9,6 +9,7 @@ import BackButton from "@/components/app/BackButton";
 import SignOutButton from "@/components/app/SignOutButton";
 import Avatar from "@/components/Avatar";
 import EnableNotifications from "@/components/pods/EnableNotifications";
+import Disclaimer from "@/components/Disclaimer";
 import { FACULTIES } from "@/lib/auth";
 import { shortCampus } from "@/lib/places";
 import { prettyTime } from "@/lib/pods/time";
@@ -221,6 +222,10 @@ export default function SettingsView({ data, justSaved = false }: { data: Settin
             </button>
           </div>
         )}
+
+        <div className="mt-4 border-t border-ink/5 pt-4 text-center">
+          <Disclaimer />
+        </div>
       </section>
 
       {/* Commute, car, licence */}
