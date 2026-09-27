@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { DEMO_MODE } from "@/lib/demo";
 import type { LatLng } from "@/lib/geo";
 import type { Role } from "@/lib/types";
 
@@ -57,7 +56,6 @@ export function usePresence(
   };
 
   useEffect(() => {
-    if (DEMO_MODE) return;
     const supabase = createClient();
     const seen = new Map<string, { u: PresenceUser; at: number }>();
     const publish = () => setOthers(Array.from(seen.values()).map((x) => x.u));
@@ -101,14 +99,4 @@ export function usePresence(
   }, [share, myPos?.lat, myPos?.lng]);
 
   return others;
-}
-
-// Increments every `ms`. Drives simulated driver movement.
-export function useTick(ms: number): number {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setN((x) => x + 1), ms);
-    return () => clearInterval(t);
-  }, [ms]);
-  return n;
 }

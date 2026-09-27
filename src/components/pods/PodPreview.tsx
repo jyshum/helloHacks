@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { BadgeCheck, CalendarX, GraduationCap, MessageCircle, Wallet as WalletIcon, MapPin, Timer, X } from "lucide-react";
+import { BadgeCheck, CalendarX, GraduationCap, House, MessageCircle, Wallet as WalletIcon, MapPin, Timer, X } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
@@ -42,6 +42,7 @@ type Preview = {
   schedule: {
     day: number;
     state: "fit" | "off" | "none";
+    homeLeave: string | null;
     ok: boolean;
     note: string | null;
     drives: boolean;
@@ -210,6 +211,9 @@ export default function PodPreview({
                       title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
                       sub={today.youNeed && today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
                     />
+                    {today.homeLeave && (
+                      <Line icon={<House size={18} aria-hidden />} title={`Ride home ${prettyTime(today.homeLeave)}`} sub="Optional · tap in on the days you need it" />
+                    )}
                     <button onClick={() => setShowFare((s) => !s)} className="w-full text-left" aria-expanded={showFare}>
                       <Line icon={<WalletIcon size={18} aria-hidden />} title={`${formatCents(data.fare.total)} a ride`} sub={showFare ? "Paid from your wallet on arrival" : "Tap for breakdown"} />
                     </button>

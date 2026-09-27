@@ -40,7 +40,7 @@ function Login() {
       return;
     }
     const sync = await fetch("/api/auth/sync", { method: "POST" }).then((r) => r.json());
-    router.push(sync.next === "/verify" ? `/verify?email=${encodeURIComponent(email)}` : sync.next ?? "/map");
+    router.push(sync.next === "/verify" ? `/verify?email=${encodeURIComponent(email)}` : sync.next ?? "/pods");
     router.refresh();
   }
 

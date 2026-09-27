@@ -17,6 +17,8 @@ export interface CommuteProfile {
   days: Weekday[];
   arrive_by: string; // "HH:MM:SS"
   day_times: Partial<Record<Weekday, string>>;
+  home_leave_at: string | null; // driver: when they usually leave campus (null = no ride home)
+  home_day_times: Partial<Record<Weekday, string>>;
   seats: number;
   active: boolean;
 }

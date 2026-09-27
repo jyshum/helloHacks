@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Requesting now happens on the map ("Where to?").
-export default function RequestPage() {
-  redirect("/map");
+// One-off "ride today" is deferred: everything happens in pods.
+export default function Page() {
+  redirect("/pods");
 }

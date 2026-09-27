@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, BadgeCheck, Clock, House, IdCard, Search, Settings, ShieldCheck, Users, Wallet, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BadgeCheck, Clock, IdCard, Search, Settings, ShieldCheck, Users, Wallet, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Avatar from "@/components/Avatar";
@@ -80,7 +80,6 @@ export default function ProfileMenu({
             <nav className="flex flex-col py-2">
               <MenuItem href="/pods" label="My pods" icon={Users} onClick={() => setOpen(false)} />
               <MenuItem href="/people" label="Find commuters" icon={Search} onClick={() => setOpen(false)} />
-              <MenuItem href="/map" label="Ride today" icon={House} onClick={() => setOpen(false)} />
               <MenuItem href="/trips" label="Your trips" icon={Clock} onClick={() => setOpen(false)} />
               <MenuItem href="/wallet" label="Wallet" icon={Wallet} onClick={() => setOpen(false)} />
               <MenuItem href="/settings" label="Settings" icon={Settings} onClick={() => setOpen(false)} />

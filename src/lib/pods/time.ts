@@ -25,6 +25,12 @@ export function arriveOn(p: Pick<CommuteProfile, "arrive_by" | "day_times">, day
   return toMinutes(p.day_times?.[day] ?? p.arrive_by);
 }
 
+// When the driver leaves campus for the ride home on a weekday (minutes), or null if they don't.
+export function leaveOn(p: Pick<CommuteProfile, "home_leave_at" | "home_day_times">, day: Weekday): number | null {
+  const t = p.home_day_times?.[day] ?? p.home_leave_at;
+  return t ? toMinutes(t) : null;
+}
+
 // "Now" for all pod scheduling. Normally the real time. In a local demo recording the
 // server gets DEMO_CLOCK_OFFSET_MS and the page gets the same offset from the root layout,
 // so e.g. a Sunday recording can show a Monday-morning commute.

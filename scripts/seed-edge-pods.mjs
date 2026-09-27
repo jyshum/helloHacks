@@ -105,7 +105,7 @@ async function main() {
     must(await db.from("commute_profiles").insert({
       user_id: driverId, mode: "driver", home_lat: d.home.lat, home_lng: d.home.lng, home_area: d.area,
       campus_lat: CAMPUS.lat, campus_lng: CAMPUS.lng, campus_label: CAMPUS.label,
-      days: spec.days, arrive_by: spec.arrive_by, day_times: spec.day_times, seats: spec.seats,
+      days: spec.days, arrive_by: spec.arrive_by, day_times: spec.day_times, seats: spec.seats, home_leave_at: "16:30",
       route_polyline: route.polyline, route_minutes: route.minutes, active: true,
     }), "driver profile");
     must(await db.from("vehicles").insert({

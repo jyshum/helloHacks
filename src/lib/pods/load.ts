@@ -25,7 +25,7 @@ export type PodView = {
   pod: Pod;
   me: MemberView | null; // null = not a member (e.g. viewing an invite that was withdrawn)
   driver: MemberView;
-  driverProfile: Pick<CommuteProfile, "home_area" | "days" | "arrive_by" | "day_times" | "seats" | "campus_label"> & {
+  driverProfile: Pick<CommuteProfile, "home_area" | "days" | "arrive_by" | "day_times" | "seats" | "campus_label" | "home_leave_at" | "home_day_times"> & {
     route_polyline: string | null;
     route_minutes: number | null;
   };
@@ -38,6 +38,7 @@ export type PodView = {
   seatsLeft: number;
   reliability: { completed: number; missed: number };
   nextTrip: TripView | null;
+  homeRides: { user_id: string; trip_date: string }[]; // who's in for upcoming rides home
   paused: { since: string; until: string } | null; // driver paused driving; spots held until `until`
 };
 
@@ -77,6 +78,8 @@ export async function loadPodView(podId: string, meUserId: string): Promise<PodV
   const requests = safe.filter((m) => m.role === "rider" && m.status === "requested");
   const invited = safe.filter((m) => m.role === "rider" && m.status === "invited");
 
+  const { data: homeRides } = await admin.from("pod_home_rides").select("user_id, trip_date").eq("pod_id", podId).gte("trip_date", vancouverNow().date);
+
   const { data: history } = await admin.from("pod_trips").select("status").eq("pod_id", podId).in("status", ["completed", "missed"]);
   const reliability = {
     completed: (history ?? []).filter((t) => t.status === "completed").length,
@@ -92,6 +95,8 @@ export async function loadPodView(podId: string, meUserId: string): Promise<PodV
       days: dp.days,
       arrive_by: dp.arrive_by,
       day_times: dp.day_times,
+      home_leave_at: dp.home_leave_at,
+      home_day_times: dp.home_day_times ?? {},
       seats: dp.seats,
       campus_label: dp.campus_label,
       // Only the driver gets their raw route (it starts at their home).
@@ -106,6 +111,7 @@ export async function loadPodView(podId: string, meUserId: string): Promise<PodV
     invited,
     seatsLeft: dp.seats - riders.length - requests.length - invited.length,
     reliability,
+    homeRides: homeRides ?? [],
     // Riders only ride on their own days in this pod. Paused pods have no upcoming trip.
     nextTrip: pod.status === "paused" ? null : await loadNextTrip(podId, dp, me && me.role === "rider" && me.days.length ? (me.days as Weekday[]) : undefined),
     paused: pod.status === "paused" && pod.paused_at ? { since: pod.paused_at, until: holdUntil(pod.paused_at) } : null,

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, CirclePause, Pencil, Play, Plus, Search, Timer, X, Zap } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, CirclePause, Pencil, Play, Plus, Search, Timer, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
@@ -15,6 +15,7 @@ import EnableNotifications from "@/components/pods/EnableNotifications";
 import type { LatLng } from "@/lib/geo";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import RidersForYou from "@/components/pods/RidersForYou";
+import RideHome from "@/components/pods/RideHome";
 import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import { fareBetween, formatCents } from "@/lib/pricing";
@@ -187,6 +188,18 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
 
         {inPod && (
           <div className="rise">
+            {/* Driver taking a break: easy to find, right at the top. */}
+            {isDriver && !view.paused && (
+              <button
+                onClick={() => {
+                  if (confirm("Pause driving? Your riders keep their spots for 7 days while you're away, and you can resume any time.")) call(`/api/pods/${pod.id}/pause`);
+                }}
+                disabled={!!busy}
+                className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 py-3 text-sm font-semibold text-amber-800 transition active:scale-[0.98]"
+              >
+                <CirclePause size={17} aria-hidden /> Pause driving
+              </button>
+            )}
             <DayPicker days={myDays} value={day} onChange={setDay} />
             <h1 className="mt-4 text-[28px] font-bold leading-tight text-ubc">
               {shortCampus(pod.campus_label)} by {prettyTime(arriveTime)}
@@ -202,6 +215,8 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
             </p>
 
             {nextTrip && !(isDriver && riders.length === 0) && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
+
+            <RideHome view={view} day={day} isDriver={isDriver} busy={!!busy} call={call} />
 
             {/* Members */}
             <div className="card mt-4 p-4">
@@ -268,21 +283,7 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
               </Link>
             )}
 
-            <div className="mt-10 flex items-center justify-center gap-6 text-sm">
-              <Link href="/map" className="flex items-center gap-1.5 font-semibold text-blue">
-                <Zap size={14} aria-hidden /> Ride today
-              </Link>
-              {isDriver && !view.paused && (
-                <button
-                  onClick={() => {
-                    if (confirm(`Pause driving? Your riders keep their spots for 7 days while you're away, and you can resume any time.`)) call(`/api/pods/${pod.id}/pause`);
-                  }}
-                  disabled={!!busy}
-                  className="font-semibold text-muted"
-                >
-                  Pause driving
-                </button>
-              )}
+            <div className="mt-10 flex items-center justify-center text-sm">
               <button
                 onClick={async () => {
                   const msg = isDriver
@@ -559,14 +560,14 @@ function TripCard({
         <Banner tone="bad" icon={<AlertTriangle size={17} aria-hidden />} text={`${driverName} isn't coming`}>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button onClick={() => call(url, { action: "missed", date: trip.date })} className="btn-ghost py-2.5 text-sm">Report</button>
-            <Link href="/map" className="btn-ubc py-2.5 text-sm">Find a ride</Link>
+            <Link href="/pods" className="btn-ubc py-2.5 text-sm">Backup pod</Link>
           </div>
         </Banner>
       )}
 
       <div className="mt-4 flex flex-col gap-2">
         {!isDriver && ["cancelled", "missed"].includes(trip.status) && (
-          <Link href="/map" className="btn-ubc w-full"><Zap size={16} aria-hidden /> Find a ride</Link>
+          <Link href="/pods" className="btn-ubc w-full"><Search size={16} aria-hidden /> Find a backup pod</Link>
         )}
         {!isDriver && trip.status === "live" && myRequestId && (
           <Link href={`/match/${myRequestId}`} className="btn-ubc w-full py-4"><Navigation size={18} aria-hidden /> Track</Link>

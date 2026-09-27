@@ -8,13 +8,18 @@ import { CAMPUS_SPOTS } from "@/lib/places";
 import { WEEKDAY_LABELS, type CommuteMode, type CommuteProfile, type Weekday } from "@/lib/pods/types";
 
 type Home = { lat: number; lng: number; label: string };
-type Step = "mode" | "home" | "schedule" | "seats" | "car" | "saving";
+type Step = "mode" | "home" | "schedule" | "back" | "seats" | "car" | "saving";
 type CarLite = { make_model: string; color: string; license_plate: string; photo_url: string | null };
 
 const DAYS: Weekday[] = [1, 2, 3, 4, 5];
 // 7:00am – 1:00pm in 15 min steps.
 const TIMES = Array.from({ length: 25 }, (_, i) => {
   const m = 7 * 60 + i * 15;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+});
+// Ride home: 12:00pm – 9:00pm in 15 min steps.
+const HOME_TIMES = Array.from({ length: 37 }, (_, i) => {
+  const m = 12 * 60 + i * 15;
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 });
 const pretty = (t: string) => {
@@ -43,11 +48,17 @@ export default function CommuteOnboarding({
   const [times, setTimes] = useState<Record<Weekday, string>>(() =>
     Object.fromEntries(DAYS.map((d) => [d, existing?.day_times?.[d] ?? base])) as Record<Weekday, string>
   );
+  // Ride home (drivers): on by default, same default leave time every day.
+  const homeBase = existing?.home_leave_at?.slice(0, 5) ?? "16:30";
+  const [drivesHome, setDrivesHome] = useState(existing ? !!existing.home_leave_at || existing.mode !== "driver" : true);
+  const [homeTimes, setHomeTimes] = useState<Record<Weekday, string>>(() =>
+    Object.fromEntries(DAYS.map((d) => [d, existing?.home_day_times?.[d] ?? homeBase])) as Record<Weekday, string>
+  );
   const [campus, setCampus] = useState(CAMPUS_SPOTS.find((c) => c.label === existing?.campus_label) ?? CAMPUS_SPOTS[0]);
   const [seats, setSeats] = useState(existing?.seats ?? 3);
   const [error, setError] = useState<string | null>(null);
 
-  const steps: Step[] = mode === "driver" ? ["mode", "home", "schedule", "seats", "car"] : ["mode", "home", "schedule"];
+  const steps: Step[] = mode === "driver" ? ["mode", "home", "schedule", "back", "seats", "car"] : ["mode", "home", "schedule"];
   const index = Math.max(0, steps.indexOf(step));
 
   async function save() {
@@ -63,6 +74,9 @@ export default function CommuteOnboarding({
         campus_label: campus.label,
         days,
         ...splitTimes(days, times),
+        ...(mode === "driver" && drivesHome
+          ? (({ arrive_by, day_times }) => ({ home_leave_at: arrive_by, home_day_times: day_times }))(splitTimes(days, homeTimes))
+          : { home_leave_at: null }),
         seats,
       }),
     });
@@ -221,10 +235,49 @@ export default function CommuteOnboarding({
           <div className="mt-auto pt-6">
             <button
               disabled={!days.length}
-              onClick={() => (mode === "driver" ? setStep("seats") : save())}
+              onClick={() => (mode === "driver" ? setStep("back") : save())}
               className="btn-ubc w-full py-4"
             >
               {mode === "driver" ? "Continue" : "Find pods"}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === "back" && (
+        <section className="mt-8 flex flex-1 flex-col">
+          <h1 className="font-heading text-3xl font-bold leading-tight text-ubc">Heading home?</h1>
+          <p className="mt-2 text-muted">Drive your riders home too. They tap in on the days they need it.</p>
+          <div className="mt-6 flex flex-col gap-2">
+            {days.map((d) => (
+              <div key={d} className="glass flex items-center gap-3 rounded-2xl p-2 pl-4">
+                <span className="w-[76px] shrink-0 font-heading font-semibold text-ubc">{WEEKDAY_LABELS[d]}</span>
+                <select
+                  aria-label={`Leave campus on ${WEEKDAY_LABELS[d]}`}
+                  className="input flex-1 py-2.5"
+                  value={homeTimes[d]}
+                  onChange={(e) => setHomeTimes({ ...homeTimes, [d]: e.target.value })}
+                >
+                  {HOME_TIMES.map((t) => <option key={t} value={t}>Leave {pretty(t)}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+          {days.length > 1 && (
+            <button
+              onClick={() => {
+                const t = homeTimes[days[0]];
+                setHomeTimes(Object.fromEntries(DAYS.map((d) => [d, t])) as Record<Weekday, string>);
+              }}
+              className="mt-2 self-start text-sm font-semibold text-blue"
+            >
+              Same time every day
+            </button>
+          )}
+          <div className="mt-auto pt-6">
+            <button onClick={() => { setDrivesHome(true); setStep("seats"); }} className="btn-ubc w-full py-4">Continue</button>
+            <button onClick={() => { setDrivesHome(false); setStep("seats"); }} className="mt-3 w-full py-2 text-sm font-semibold text-muted">
+              I don&apos;t drive home
             </button>
           </div>
         </section>

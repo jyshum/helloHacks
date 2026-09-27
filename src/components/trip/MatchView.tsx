@@ -303,13 +303,13 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
 
         {/* Primary action */}
         <div className="mt-5 flex flex-col gap-2">
-          {ended && <Link href={trip.podId ? `/pods/${trip.podId}` : "/map"} className="btn-ubc w-full">Back</Link>}
+          {ended && <Link href={trip.podId ? `/pods/${trip.podId}` : "/pods"} className="btn-ubc w-full">Back</Link>}
           {(done || (viewer === "rider" && iAmIn && nearCampus)) && (
             <Link href={rateUrl} className="btn-ubc w-full py-4 text-lg">Rate {viewer === "rider" ? d : "your riders"}</Link>
           )}
           {pending && viewer === "driver" && (
             <div className="grid grid-cols-[1fr_2fr] gap-2">
-              <button disabled={busy} onClick={async () => (await post(`/api/ride-requests/${request.id}/decline`)) && router.push("/map")} className="btn-ghost">Decline</button>
+              <button disabled={busy} onClick={async () => (await post(`/api/ride-requests/${request.id}/decline`)) && router.push("/pods")} className="btn-ghost">Decline</button>
               <button disabled={busy} onClick={async () => (await post(`/api/ride-requests/${request.id}/accept`)) && router.refresh()} className="btn-ubc">Accept</button>
             </div>
           )}
@@ -326,7 +326,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
           {!ended && !done && !iAmIn && viewer === "rider" && (
             <button
               disabled={busy}
-              onClick={async () => (await post(`/api/ride-requests/${request.id}/cancel`)) && router.push(trip.podId ? `/pods/${trip.podId}` : "/map")}
+              onClick={async () => (await post(`/api/ride-requests/${request.id}/cancel`)) && router.push(trip.podId ? `/pods/${trip.podId}` : "/pods")}
               className="w-full py-2 text-sm font-semibold text-muted"
             >
               Cancel

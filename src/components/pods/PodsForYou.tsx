@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BadgeCheck, Car, ChevronRight, Pencil, Search, Timer, Zap } from "lucide-react";
+import { ArrowRight, BadgeCheck, Car, ChevronRight, Pencil, Search, Timer } from "lucide-react";
 import PodPreview from "@/components/pods/PodPreview";
 import { shortCampus } from "@/lib/places";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
@@ -230,9 +230,6 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
         />
       )}
 
-      <Link href="/map" className="mx-auto mt-8 flex w-fit items-center gap-1.5 text-sm font-semibold text-blue">
-        <Zap size={15} aria-hidden /> Ride today
-      </Link>
     </main>
   );
 }

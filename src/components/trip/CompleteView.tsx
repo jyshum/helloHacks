@@ -39,7 +39,7 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
     });
     setBusy(false);
     if (!res.ok) return setError((await res.json()).error);
-    router.push("/map");
+    router.push(trip.podId ? `/pods/${trip.podId}` : "/pods");
     router.refresh();
   }
 
@@ -108,7 +108,7 @@ export default function CompleteView({ trip, viewer }: { trip: TripBundle; viewe
         <button onClick={submit} disabled={!score || busy} className="btn-ubc w-full">
           {busy ? "Submitting…" : "Submit rating"}
         </button>
-        <button onClick={() => router.push("/map")} className="mt-2 w-full py-2 text-sm text-muted">
+        <button onClick={() => router.push(trip.podId ? `/pods/${trip.podId}` : "/pods")} className="mt-2 w-full py-2 text-sm text-muted">
           Skip
         </button>
       </div>

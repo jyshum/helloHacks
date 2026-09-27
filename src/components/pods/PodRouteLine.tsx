@@ -5,9 +5,22 @@ import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { LatLng } from "@/lib/geo";
 
 // The real drive: start → each pickup in order → campus, following roads.
-const cache = new Map<string, google.maps.LatLng[]>();
+const cache = new Map<string, { path: google.maps.LatLng[]; legs: number[] }>();
 
-export default function PodRouteLine({ start, stops, end, color = "#0055B7" }: { start: LatLng; stops: LatLng[]; end: LatLng; color?: string }) {
+// onLegs gets each leg's driving time in minutes (start → stop 1 → … → end).
+export default function PodRouteLine({
+  start,
+  stops,
+  end,
+  color = "#0055B7",
+  onLegs,
+}: {
+  start: LatLng;
+  stops: LatLng[];
+  end: LatLng;
+  color?: string;
+  onLegs?: (minutes: number[]) => void;
+}) {
   const map = useMap();
   const routesLib = useMapsLibrary("routes");
   const key = [start, ...stops, end].map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join("|");
@@ -21,7 +34,10 @@ export default function PodRouteLine({ start, stops, end, color = "#0055B7" }: {
       line = new google.maps.Polyline({ path, strokeColor: color, strokeOpacity: 0.9, strokeWeight: 5, map });
     };
     const hit = cache.get(key);
-    if (hit) draw(hit);
+    if (hit) {
+      draw(hit.path);
+      onLegs?.(hit.legs);
+    }
     else
       new routesLib.DirectionsService()
         .route({
@@ -33,8 +49,10 @@ export default function PodRouteLine({ start, stops, end, color = "#0055B7" }: {
         })
         .then((r) => {
           const path = r.routes[0]?.overview_path ?? [];
-          cache.set(key, path);
+          const legs = (r.routes[0]?.legs ?? []).map((l) => Math.round((l.duration?.value ?? 0) / 60));
+          cache.set(key, { path, legs });
           draw(path);
+          if (!cancelled) onLegs?.(legs);
         })
         .catch(() => draw([start, ...stops, end]));
     return () => {

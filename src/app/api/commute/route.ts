@@ -34,6 +34,15 @@ export async function PUT(req: Request) {
     if (days.includes(Number(k)) && /^\d{2}:\d{2}$/.test(String(v))) dayTimes[k] = String(v);
   }
 
+  // Ride home (drivers, optional): a default leave time + per-day overrides.
+  const drivesHome = b.mode === "driver" && /^\d{2}:\d{2}$/.test(String(b.home_leave_at ?? ""));
+  const homeDayTimes: Record<string, string> = {};
+  if (drivesHome) {
+    for (const [k, v] of Object.entries(b.home_day_times ?? {})) {
+      if (days.includes(Number(k)) && /^\d{2}:\d{2}$/.test(String(v))) homeDayTimes[k] = String(v);
+    }
+  }
+
   const admin = createAdminClient();
   const { data: prev } = await admin.from("commute_profiles").select("home_lat, home_lng, campus_lat, campus_lng").eq("user_id", me.id).maybeSingle();
   const moved =
@@ -53,6 +62,8 @@ export async function PUT(req: Request) {
     days: days.sort(),
     arrive_by: b.arrive_by,
     day_times: dayTimes,
+    home_leave_at: drivesHome ? b.home_leave_at : null,
+    home_day_times: homeDayTimes,
     seats: Math.min(6, Math.max(1, Number(b.seats) || 3)),
     active: true,
     updated_at: new Date().toISOString(),
