@@ -230,7 +230,7 @@ export default function SettingsView({ data, justSaved = false }: { data: Settin
           href="/commute"
           icon={<Route size={18} aria-hidden />}
           title={c ? `${c.mode === "driver" ? "Driving" : "Riding"}${c.mode === "driver" && !c.active ? " · paused" : ""} from ${c.area ?? "home"}` : "Set up your commute"}
-          sub={c ? `${c.days.map((d) => DAY[d]).join(", ")} · ${shortCampus(c.campus)} by ${prettyTime(c.arriveBy)}` : "Where you live and when you need to be on campus"}
+          sub={c ? `${c.days.length === 5 ? "Mon–Fri" : c.days.map((d) => DAY[d]).join(", ")} · ${shortCampus(c.campus)} by ${prettyTime(c.arriveBy)}` : "Where you live and when you need to be on campus"}
         />
         {c?.mode === "driver" && (
           <>
