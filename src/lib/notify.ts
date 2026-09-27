@@ -1,6 +1,7 @@
-// SHARED CONTRACT: Partner A calls notify(); Partner B implements delivery
-// (web push first, email fallback).
+// SHARED CONTRACT: Partner A calls notify(); Partner B implements delivery:
+// web push to every saved browser, then email (except chat) to anyone push didn't reach.
 import webpush from "web-push";
+import nodemailer, { type Transporter } from "nodemailer";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export type NoticeKind =
@@ -47,7 +48,10 @@ export async function notify(userIds: string[], notice: Notice): Promise<void> {
     const ids = Array.from(new Set(userIds.filter(Boolean)));
     if (!ids.length) return;
     const pushed = await sendPush(ids, notice);
-    console.log(`[notify] ${notice.kind} → ${ids.length} user(s), push to ${pushed.size}: ${notice.title}`);
+    // Email anyone the push didn't reach, except for chat (too noisy for email).
+    const emailTo = notice.kind === "chat" ? [] : ids.filter((id) => !pushed.has(id));
+    const emailed = emailTo.length ? await sendEmail(emailTo, notice) : 0;
+    console.log(`[notify] ${notice.kind} → ${ids.length} user(s), push ${pushed.size}, email ${emailed}: ${notice.title}`);
   } catch (e) {
     console.error(`[notify] ${notice.kind} failed:`, e);
   }
@@ -94,4 +98,87 @@ async function sendPush(userIds: string[], notice: Notice): Promise<Set<string>>
 
   if (gone.length) await admin.from("push_subscriptions").delete().in("id", gone);
   return delivered;
+}
+
+// --- Email fallback (Gmail SMTP as hoppedinn@gmail.com) ---
+
+let mailer: Transporter | null | undefined;
+function getMailer(): Transporter | null {
+  if (mailer !== undefined) return mailer;
+  const { SMTP_USER, SMTP_PASS } = process.env;
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.warn("[notify] email disabled: SMTP_USER / SMTP_PASS missing");
+    return (mailer = null);
+  }
+  mailer = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // STARTTLS
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
+  });
+  return mailer;
+}
+
+// One email per user (never a shared To: list). Returns how many were accepted.
+async function sendEmail(userIds: string[], notice: Notice): Promise<number> {
+  const transport = getMailer();
+  if (!transport) return 0;
+  const { data: users } = await createAdminClient().from("users").select("id, ubc_email, full_name").in("id", userIds);
+  if (!users?.length) return 0;
+
+  const link = appUrl() ? `${appUrl()}${notice.url}` : null;
+  const results = await Promise.allSettled(
+    users
+      .filter((u) => u.ubc_email)
+      .map((u) =>
+        transport.sendMail({
+          from: `hoppedIn <${process.env.SMTP_USER}>`,
+          to: u.ubc_email,
+          subject: notice.title,
+          text: [notice.body, link ? `Open hoppedIn: ${link}` : ""].filter(Boolean).join("\n\n"),
+          html: emailHtml(notice, link, u.full_name?.split(" ")[0] ?? null),
+        })
+      )
+  );
+  results.forEach((r) => r.status === "rejected" && console.warn(`[notify] email failed: ${(r.reason as Error)?.message ?? r.reason}`));
+  return results.filter((r) => r.status === "fulfilled").length;
+}
+
+function appUrl(): string {
+  const url = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+  return url.replace(/\/$/, "");
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+// Table layout + inline styles so it renders in Gmail, Outlook and Apple Mail.
+function emailHtml(notice: Notice, link: string | null, firstName: string | null): string {
+  const button = link
+    ? `<tr><td style="padding:8px 32px 32px">
+         <a href="${escapeHtml(link)}" style="display:inline-block;background:#002145;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Open hoppedIn</a>
+       </td></tr>`
+    : "";
+  return `<!doctype html>
+<html><body style="margin:0;padding:0;background:#F5F8FC;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0B1B2E">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F8FC;padding:24px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border:1px solid #DCE4EE;border-radius:20px;overflow:hidden">
+        <tr><td style="background:#002145;padding:18px 32px;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.2px">hoppedIn</td></tr>
+        <tr><td style="padding:28px 32px 8px">
+          ${firstName ? `<p style="margin:0 0 8px;font-size:14px;color:#6B7C93">Hi ${escapeHtml(firstName)},</p>` : ""}
+          <h1 style="margin:0 0 10px;font-size:20px;line-height:1.3;color:#002145">${escapeHtml(notice.title)}</h1>
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#0B1B2E">${escapeHtml(notice.body)}</p>
+        </td></tr>
+        ${button}
+      </table>
+      <p style="max-width:480px;margin:16px auto 0;font-size:12px;line-height:1.5;color:#6B7C93">
+        You're getting this because you're in a hoppedIn commute pod. Turn on notifications in the app to get these as alerts instead of email.
+      </p>
+    </td></tr>
+  </table>
+</body></html>`;
 }

@@ -15,12 +15,14 @@
     "@vis.gl/react-google-maps": "^1.10.1",
     "lucide-react": "^1.48.0",
     "next": "14.2.35",
+    "nodemailer": "^10.0.10",
     "react": "^18",
     "react-dom": "^18",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/web-push": "^3.6.4",
