@@ -1,19 +1,31 @@
-// The Hopped logo. The white PNGs are used as a mask, so the logo takes any colour
-// (navy on light screens, white on dark ones) and stays crisp.
+/* eslint-disable @next/next/no-img-element */
+// The Hopped logo as plain images (navy for light screens, white for dark ones).
+// Images, not a CSS mask: a mask shows as a solid block for a moment while it loads.
 const ART = {
-  full: { src: "/brand/logo.png", ratio: 688 / 106 },
-  mark: { src: "/brand/mark.png", ratio: 416 / 148 },
+  full: { ratio: 688 / 106, file: "logo" },
+  mark: { ratio: 416 / 148, file: "mark" },
 };
 
-export default function Logo({ variant = "full", height = 24, className = "bg-ubc" }: { variant?: keyof typeof ART; height?: number; className?: string }) {
-  const { src, ratio } = ART[variant];
-  const mask = `url(${src}) center / contain no-repeat`;
+export default function Logo({
+  variant = "full",
+  height = 24,
+  tone = "navy",
+  className = "",
+}: {
+  variant?: keyof typeof ART;
+  height?: number;
+  tone?: "navy" | "white";
+  className?: string;
+}) {
+  const { ratio, file } = ART[variant];
   return (
-    <span
-      role="img"
-      aria-label="Hopped"
-      className={`inline-block shrink-0 ${className}`}
-      style={{ height, width: Math.round(height * ratio), WebkitMask: mask, mask }}
+    <img
+      src={`/brand/${file}${tone === "navy" ? "-navy" : ""}.png`}
+      alt="Hopped"
+      width={Math.round(height * ratio)}
+      height={height}
+      className={`shrink-0 select-none ${className}`}
+      draggable={false}
     />
   );
 }

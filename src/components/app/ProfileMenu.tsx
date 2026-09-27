@@ -108,7 +108,7 @@ export default function ProfileMenu({
               )}
             </nav>
 
-            <div className="mt-auto px-5 pt-6 opacity-60"><Logo height={16} className="bg-muted" /></div>
+            <div className="mt-auto px-5 pt-6 opacity-60"><Logo height={16} /></div>
             <button onClick={signOut} className="px-5 pb-6 pt-3 text-left text-sm font-medium text-muted hover:text-ink">
               Sign out
             </button>

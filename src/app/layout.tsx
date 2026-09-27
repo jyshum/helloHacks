@@ -30,12 +30,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* Local demo recordings only: share the server's shifted clock with the page. */}
-      {process.env.DEMO_CLOCK_OFFSET_MS && (
-        <head>
+      <head>
+        <link rel="preload" as="image" href="/brand/logo-navy.png" />
+        <link rel="preload" as="image" href="/brand/mark-navy.png" />
+        {/* Local demo recordings only: share the server's shifted clock with the page. */}
+        {process.env.DEMO_CLOCK_OFFSET_MS && (
           <script dangerouslySetInnerHTML={{ __html: `window.__clockOffset=${Number(process.env.DEMO_CLOCK_OFFSET_MS)};` }} />
-        </head>
-      )}
+        )}
+      </head>
       <body className={inter.variable}>
         <PageTransition>{children}</PageTransition>
       </body>

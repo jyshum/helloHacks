@@ -184,6 +184,8 @@ async function signUp(page, who) {
   const p = PEOPLE[who];
   await page.goto(BASE);
   await page.waitForLoadState("networkidle");
+  await page.waitForFunction(() => Array.from(document.images).every((i) => i.complete && i.naturalWidth > 0));
+  await sleep(600);
   mark(who, "landing");
   await sleep(1400);
   await tap(page, page.getByRole("link", { name: /Get started/ }));
