@@ -25,8 +25,19 @@ export function arriveOn(p: Pick<CommuteProfile, "arrive_by" | "day_times">, day
   return toMinutes(p.day_times?.[day] ?? p.arrive_by);
 }
 
+// "Now" for all pod scheduling. Normally the real time. In a local demo recording the
+// server gets DEMO_CLOCK_OFFSET_MS and the page gets the same offset from the root layout,
+// so e.g. a Sunday recording can show a Monday-morning commute.
+export function clockNow(): Date {
+  const offset =
+    typeof window !== "undefined"
+      ? (window as unknown as { __clockOffset?: number }).__clockOffset ?? 0
+      : Number(process.env.DEMO_CLOCK_OFFSET_MS ?? 0);
+  return new Date(Date.now() + offset);
+}
+
 // Current date/weekday/minutes in Vancouver.
-export function vancouverNow(now = new Date()) {
+export function vancouverNow(now = clockNow()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short" })
       .formatToParts(now)
@@ -48,7 +59,7 @@ export function weekdayOf(date: string): number {
 }
 
 // Next date (today included if `cutoffMinutes` hasn't passed) that falls on one of `days`.
-export function nextDateOn(days: Weekday[], cutoffMinutes: number, now = new Date()): string | null {
+export function nextDateOn(days: Weekday[], cutoffMinutes: number, now = clockNow()): string | null {
   if (!days.length) return null;
   const v = vancouverNow(now);
   for (let i = 0; i < 8; i++) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
-import { isAllowedEmail } from "@/lib/auth";
+import { isAllowedEmail, isDevEnvironment } from "@/lib/auth";
 import type { Role } from "@/lib/types";
 
 // Signup runs server-side so we can insert the users row and upload the photo
@@ -23,24 +23,34 @@ export async function POST(req: Request) {
   if (password.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
   if (!["driver", "rider", "both"].includes(role)) return NextResponse.json({ error: "Invalid role." }, { status: 400 });
 
-  const supabase = createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/verify/callback`,
-      data: { full_name: fullName, role },
-    },
-  });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  // Local demo recording only: no email is sent. The account is created confirmed and the
+  // response carries the same one-time link the verification email would contain.
+  const recording = process.env.DEMO_RECORDING === "1" && isDevEnvironment();
+  const admin = createAdminClient();
+  let authUser;
+  if (recording) {
+    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: fullName, role } });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    authUser = { ...data.user, identities: data.user.identities ?? [{}] };
+  } else {
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/verify/callback`,
+        data: { full_name: fullName, role },
+      },
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    authUser = data.user;
+  }
 
-  const authUser = data.user;
   // Supabase returns a user with no identities when the email is already registered.
   if (!authUser || authUser.identities?.length === 0) {
     return NextResponse.json({ error: "That email already has an account. Try logging in." }, { status: 409 });
   }
 
-  const admin = createAdminClient();
   let photoUrl: string | null = null;
   if (photo instanceof File && photo.size > 0) {
     const ext = (photo.name.split(".").pop() || "jpg").toLowerCase();
@@ -66,5 +76,9 @@ export async function POST(req: Request) {
   );
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
 
+  if (recording) {
+    const { data: link } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+    return NextResponse.json({ ok: true, emailLink: link?.properties ? `/verify/callback?token_hash=${link.properties.hashed_token}&type=magiclink` : null });
+  }
   return NextResponse.json({ ok: true });
 }

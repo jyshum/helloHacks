@@ -30,6 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* Local demo recordings only: share the server's shifted clock with the page. */}
+      {process.env.DEMO_CLOCK_OFFSET_MS && (
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: `window.__clockOffset=${Number(process.env.DEMO_CLOCK_OFFSET_MS)};` }} />
+        </head>
+      )}
       <body className={inter.variable}>
         <PageTransition>{children}</PageTransition>
       </body>
