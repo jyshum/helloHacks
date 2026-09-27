@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notify";
 import { postSystemMessage } from "@/lib/pods/chat";
+import { podShareFor } from "@/lib/pricing";
 import { dayWord, prettyTime, weekdayOf } from "@/lib/pods/time";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -103,7 +104,7 @@ export async function startTrip(podId: string, date: string) {
         dropoff_label: pod!.campus_label,
         detour_minutes: m.detour_minutes,
         detour_km: null,
-        estimated_cost_cents: null,
+        estimated_cost_cents: podShareFor({ lat: m.pickup_lat ?? dp!.home_lat, lng: m.pickup_lng ?? dp!.home_lng }, { lat: pod!.campus_lat, lng: pod!.campus_lng }),
         status: "accepted",
       }))
     );

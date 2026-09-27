@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 import type { RideRequest } from "@/lib/types";
+import { settleRequest } from "@/lib/wallet";
 
 type Next = RideRequest["status"];
 
@@ -38,5 +39,6 @@ export async function setRequestStatus(requestId: string, next: Next) {
 
   const { error } = await admin.from("ride_requests").update({ status: next }).eq("id", requestId);
   if (error) return jsonError(error.message, 500);
+  if (next === "completed") await settleRequest(requestId);
   return NextResponse.json({ ok: true, rideId: ride.id });
 }

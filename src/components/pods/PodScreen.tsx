@@ -16,6 +16,7 @@ import type { LatLng } from "@/lib/geo";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
+import { formatCents, podShareFor } from "@/lib/pricing";
 import type { Weekday } from "@/lib/pods/types";
 
 import type { MemberView, PodView } from "@/lib/pods/load";
@@ -91,6 +92,9 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
     .sort((a, b) => a.time.localeCompare(b.time));
   const stops: LatLng[] = riding.map(({ m }) => ({ lat: m.pickup_lat!, lng: m.pickup_lng! }));
   const myTime = riding.find((x) => x.m.user_id === mine.user_id)?.time ?? null;
+  // Gas shares (demo wallet): what you pay per ride, or what the driver gets this day.
+  const shareOf = (m: MemberView) => podShareFor({ lat: m.pickup_lat!, lng: m.pickup_lng! }, campus);
+  const money = isDriver ? riding.reduce((sum, { m }) => sum + shareOf(m), 0) : mine.pickup_lat != null ? shareOf(mine) : 0;
 
   return (
     <div className="relative min-h-[100dvh]">
@@ -166,10 +170,10 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
             <p className="mt-1 text-[15px] text-muted">
               {isDriver
                 ? riding.length
-                  ? `${riding.length} ${riding.length === 1 ? "rider" : "riders"} · first pickup ${prettyTime(riding[0].time)}`
+                  ? `${riding.length} ${riding.length === 1 ? "rider" : "riders"} · first pickup ${prettyTime(riding[0].time)} · earn ${formatCents(money)}`
                   : "No riders this day"
                 : myTime
-                  ? `Pickup ${prettyTime(myTime)} · ${mine.pickup_label ?? ""}`
+                  ? `Pickup ${prettyTime(myTime)} · ${formatCents(money)} a ride`
                   : `from ${driverProfile.home_area ?? "home"}`}
             </p>
 

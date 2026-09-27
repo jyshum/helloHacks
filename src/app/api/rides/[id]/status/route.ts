@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
+import { settleRequest } from "@/lib/wallet";
 
 const ALLOWED = ["posted", "active", "completed", "cancelled"];
 
@@ -24,7 +25,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await admin.from("ride_requests").update({ status: "declined" }).eq("ride_id", params.id).eq("status", "pending");
   }
   if (status === "completed") {
+    const { data: aboard } = await admin.from("ride_requests").select("id, picked_up_at").eq("ride_id", params.id).eq("status", "accepted");
     await admin.from("ride_requests").update({ status: "completed" }).eq("ride_id", params.id).eq("status", "accepted");
+    // Everyone who got in pays their gas share (if no one was checked off, assume all rode).
+    const paid = aboard?.some((r) => r.picked_up_at) ? aboard.filter((r) => r.picked_up_at) : aboard ?? [];
+    await Promise.all(paid.map((r) => settleRequest(r.id)));
   }
   // Keep a pod's daily trip in sync with its ride.
   if (status === "completed" || status === "cancelled") {

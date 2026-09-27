@@ -5,6 +5,7 @@ import { jsonError } from "@/lib/api";
 import { dayStates, fitFor } from "@/lib/pods/match";
 import { arriveOn, fromMinutes, pickupOn } from "@/lib/pods/time";
 import { publicRouteStart } from "@/lib/pods/route";
+import { podShareFor } from "@/lib/pricing";
 import type { Weekday } from "@/lib/pods/types";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +87,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       detourMinutes: fit.detourMinutes,
     },
     schedule,
+    shareCents: podShareFor(fit.pickup, campusPos),
     me: { faculty: me.faculty, year: me.year },
   });
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, BadgeCheck, Clock, House, IdCard, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BadgeCheck, Clock, House, IdCard, ShieldCheck, Users, Wallet, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Avatar from "@/components/Avatar";
@@ -81,6 +81,7 @@ export default function ProfileMenu({
               <MenuItem href="/pods" label="My pods" icon={Users} onClick={() => setOpen(false)} />
               <MenuItem href="/map" label="Ride today" icon={House} onClick={() => setOpen(false)} />
               <MenuItem href="/trips" label="Your trips" icon={Clock} onClick={() => setOpen(false)} />
+              <MenuItem href="/wallet" label="Wallet" icon={Wallet} onClick={() => setOpen(false)} />
               {me.isAdmin && (
                 <Link href="/admin" onClick={() => setOpen(false)} className="flex items-center gap-4 px-5 py-4 font-medium text-ink hover:bg-white/60">
                   <ShieldCheck size={20} className="w-6 text-muted" aria-hidden />

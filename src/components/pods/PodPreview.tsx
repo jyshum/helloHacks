@@ -4,12 +4,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { BadgeCheck, CalendarX, GraduationCap, MessageCircle, MapPin, Timer, X } from "lucide-react";
+import { BadgeCheck, CalendarX, GraduationCap, MessageCircle, Wallet as WalletIcon, MapPin, Timer, X } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
 import { prettyTime } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
+import { formatCents } from "@/lib/pricing";
 import type { LatLng } from "@/lib/geo";
 
 const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -36,6 +37,7 @@ type Preview = {
     detourMinutes: number;
   };
   routeStart: LatLng;
+  shareCents: number;
   schedule: {
     day: number;
     state: "fit" | "off" | "none";
@@ -206,6 +208,7 @@ export default function PodPreview({
                       title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
                       sub={today.youNeed && today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
                     />
+                    <Line icon={<WalletIcon size={18} aria-hidden />} title={`${formatCents(data.shareCents)} a ride`} sub="Gas share, paid from your wallet on arrival" />
                     <p className="py-3 text-[13px] text-muted">
                       {today.riders ? `${today.riders + 1} riders this day` : "Just you and the driver this day"}
                     </p>
