@@ -61,7 +61,7 @@ export interface Rating {
   comment: string | null;
 }
 
-// Manual driver-license review by the hoppedIn team.
+// Manual driver-license review by the Hopped team.
 export interface LicenseReview {
   id: string;
   user_id: string;

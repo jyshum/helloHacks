@@ -9,12 +9,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "hoppedIn",
+  title: "Hopped",
   description: "Ride to UBC together.",
   // PWA install + web push (iOS only allows push for apps added to the Home Screen).
   manifest: "/manifest.webmanifest",
   icons: { apple: "/icons/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "hoppedIn", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Hopped", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -52,7 +53,8 @@ function SignupForm() {
         <ArrowLeft size={16} aria-hidden /> Back
       </Link>
       <div className="mt-4 mb-6">
-        <h1 className="text-3xl font-bold text-ubc">Create your account</h1>
+        <Logo variant="mark" height={30} />
+        <h1 className="mt-4 text-3xl font-bold text-ubc">Create your account</h1>
         <p className="mt-1 text-muted">
           One account to ride and drive. We&apos;ll send a link to your UBC inbox.
         </p>

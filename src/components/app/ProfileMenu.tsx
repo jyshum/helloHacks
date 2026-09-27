@@ -7,6 +7,7 @@ import { ArrowLeftRight, BadgeCheck, Clock, IdCard, Search, Settings, ShieldChec
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Avatar from "@/components/Avatar";
+import Logo from "@/components/Logo";
 import type { Role } from "@/lib/types";
 
 export type MenuUser = {
@@ -107,7 +108,8 @@ export default function ProfileMenu({
               )}
             </nav>
 
-            <button onClick={signOut} className="mt-auto px-5 py-6 text-left text-sm font-medium text-muted hover:text-ink">
+            <div className="mt-auto px-5 pt-6 opacity-60"><Logo height={16} className="bg-muted" /></div>
+            <button onClick={signOut} className="px-5 pb-6 pt-3 text-left text-sm font-medium text-muted hover:text-ink">
               Sign out
             </button>
           </div>

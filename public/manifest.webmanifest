@@ -1,12 +1,12 @@
 {
-  "name": "hoppedIn",
-  "short_name": "hoppedIn",
+  "name": "Hopped",
+  "short_name": "Hopped",
   "description": "Carpool to UBC with the same verified students every week.",
-  "start_url": "/map",
+  "start_url": "/pods",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F5F8FC",
-  "theme_color": "#002145",
+  "theme_color": "#00204F",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

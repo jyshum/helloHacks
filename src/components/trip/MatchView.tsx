@@ -110,7 +110,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
   async function share() {
     const text = `I'm riding to ${campus} with ${driver.full_name}${vehicle ? ` in a ${vehicle.color} ${vehicle.make_model} (${vehicle.license_plate})` : ""}. Pickup: ${request.pickup_label}.`;
     try {
-      if (navigator.share) await navigator.share({ title: "My hoppedIn ride", text });
+      if (navigator.share) await navigator.share({ title: "My Hopped ride", text });
       else {
         await navigator.clipboard.writeText(text);
         setNote("Copied.");
@@ -251,7 +251,7 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
         {/* Quick actions */}
         {!ended && !done && !pending && (
           <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-            <a href={`mailto:${other.ubc_email}?subject=hoppedIn`} className="glass flex flex-col items-center gap-1 rounded-2xl py-3 font-medium">
+            <a href={`mailto:${other.ubc_email}?subject=Hopped`} className="glass flex flex-col items-center gap-1 rounded-2xl py-3 font-medium">
               <Mail size={19} className="text-ubc" aria-hidden />Message
             </a>
             <button onClick={share} className="glass flex flex-col items-center gap-1 rounded-2xl py-3 font-medium">

@@ -1,17 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Car, ShieldCheck, Timer, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, ShieldCheck, Timer, Users } from "lucide-react";
 import Disclaimer from "@/components/Disclaimer";
+import Logo from "@/components/Logo";
 
 export default function Landing() {
   return (
     <main className="screen flex min-h-[100dvh] flex-col">
       <nav className="flex items-center justify-between">
-        <span className="flex items-center gap-2 text-lg font-bold tracking-tight text-ubc">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-ubc text-white shadow-glow">
-            <Car size={16} aria-hidden />
-          </span>
-          hoppedIn
-        </span>
+        <Logo height={24} />
         <Link href="/login" className="glass rounded-full px-4 py-2 text-sm font-semibold text-ubc">
           Log in
         </Link>

@@ -77,7 +77,7 @@ export default function DriverVerify({ licenseVerified, review: initialReview, v
 
         {verified && (
           <p className="mt-3 flex items-center gap-2 rounded-2xl bg-green/10 px-4 py-3 text-sm font-semibold text-green">
-            <BadgeCheck size={18} aria-hidden /> License verified by the hoppedIn team
+            <BadgeCheck size={18} aria-hidden /> License verified by the Hopped team
           </p>
         )}
 
@@ -107,7 +107,7 @@ export default function DriverVerify({ licenseVerified, review: initialReview, v
             <button type="submit" disabled={busy === "license"} className="btn-ubc mt-1">
               {busy === "license" ? "Uploading…" : "Submit for review"}
             </button>
-            <p className="text-center text-xs text-muted">Photos are private. Only the hoppedIn review team can see them.</p>
+            <p className="text-center text-xs text-muted">Photos are private. Only the Hopped review team can see them.</p>
           </form>
         )}
       </section>

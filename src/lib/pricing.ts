@@ -1,7 +1,7 @@
 import { haversineKm, type LatLng } from "@/lib/geo";
 
 // Ride price, per rider per ride: driver fee + company fee + gas by distance, then 5% tax.
-// The driver gets the driver fee and the gas; hoppedIn keeps the company fee; tax is remitted.
+// The driver gets the driver fee and the gas; Hopped keeps the company fee; tax is remitted.
 export const DRIVER_FEE_CENTS = 500;
 export const COMPANY_FEE_CENTS = 200;
 export const GAS_PER_KM_CENTS = 15;

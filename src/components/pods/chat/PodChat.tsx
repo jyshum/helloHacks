@@ -318,7 +318,7 @@ export default function PodChat({ podId, me }: { podId: string; me: ChatPerson }
           onClose={() => setReporting(null)}
           onDone={() => {
             setReporting(null);
-            setToast("Thanks. The hoppedIn team will review this message.");
+            setToast("Thanks. The Hopped team will review this message.");
           }}
         />
       )}
@@ -441,7 +441,7 @@ function ReportSheet({ podId, message, onClose, onDone }: { podId: string; messa
             <h2 className="flex items-center gap-2 font-heading text-lg font-bold text-ink">
               <Flag size={18} className="text-red-600" aria-hidden /> Report message
             </h2>
-            <p className="mt-1 text-sm text-muted">Only the hoppedIn team sees reports. {message.sender?.full_name.split(" ")[0] ?? "They"} won&apos;t be told who reported.</p>
+            <p className="mt-1 text-sm text-muted">Only the Hopped team sees reports. {message.sender?.full_name.split(" ")[0] ?? "They"} won&apos;t be told who reported.</p>
           </div>
           <button onClick={onClose} className="rounded-full p-1 text-muted hover:bg-paper" aria-label="Close">
             <X size={20} aria-hidden />

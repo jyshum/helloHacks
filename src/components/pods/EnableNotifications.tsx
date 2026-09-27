@@ -86,7 +86,7 @@ export default function EnableNotifications({ variant = "card" }: { variant?: "c
       <div className="flex items-center gap-3 border-b border-line bg-frost px-4 py-2.5 text-sm">
         <Bell size={18} className="shrink-0 text-blue" aria-hidden />
         <p className="min-w-0 flex-1 text-ink">
-          {state === "ios-install" ? "Add hoppedIn to your Home Screen to get pod alerts." : "Get alerts for new messages and pickups."}
+          {state === "ios-install" ? "Add Hopped to your Home Screen to get pod alerts." : "Get alerts for new messages and pickups."}
         </p>
         {state !== "ios-install" && (
           <button onClick={enable} disabled={state === "busy"} className="shrink-0 font-semibold text-blue">
@@ -119,7 +119,7 @@ export default function EnableNotifications({ variant = "card" }: { variant?: "c
             <Step n={2} /> Choose <SquarePlus size={16} className="text-blue" aria-hidden /> Add to Home Screen
           </li>
           <li className="flex items-center gap-2">
-            <Step n={3} /> Open hoppedIn from your Home Screen and turn notifications on
+            <Step n={3} /> Open Hopped from your Home Screen and turn notifications on
           </li>
         </ol>
       )}
@@ -145,7 +145,7 @@ const DESCRIPTION: Record<State, string> = {
   off: "Get a heads-up when your driver confirms, runs late, or your pod sends a message.",
   on: "You'll get pod updates on this device.",
   denied: "Notifications are blocked. Allow them for this site in your browser settings, then reload.",
-  "ios-install": "On iPhone, notifications only work after adding hoppedIn to your Home Screen.",
+  "ios-install": "On iPhone, notifications only work after adding Hopped to your Home Screen.",
   unsupported: "This browser can't show notifications. Try Chrome, Edge, Firefox or Safari.",
 };
 

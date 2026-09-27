@@ -147,10 +147,10 @@ async function sendEmail(userIds: string[], notice: Notice): Promise<number> {
       .filter((u) => u.ubc_email)
       .map((u) =>
         transport.sendMail({
-          from: `hoppedIn <${process.env.SMTP_USER}>`,
+          from: `Hopped <${process.env.SMTP_USER}>`,
           to: u.ubc_email,
           subject: notice.title,
-          text: [notice.body, link ? `Open hoppedIn: ${link}` : ""].filter(Boolean).join("\n\n"),
+          text: [notice.body, link ? `Open Hopped: ${link}` : ""].filter(Boolean).join("\n\n"),
           html: emailHtml(notice, link, u.full_name?.split(" ")[0] ?? null),
         })
       )
@@ -171,7 +171,7 @@ const escapeHtml = (s: string) =>
 function emailHtml(notice: Notice, link: string | null, firstName: string | null): string {
   const button = link
     ? `<tr><td style="padding:8px 32px 32px">
-         <a href="${escapeHtml(link)}" style="display:inline-block;background:#002145;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Open hoppedIn</a>
+         <a href="${escapeHtml(link)}" style="display:inline-block;background:#002145;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Open Hopped</a>
        </td></tr>`
     : "";
   return `<!doctype html>
@@ -179,7 +179,9 @@ function emailHtml(notice: Notice, link: string | null, firstName: string | null
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F8FC;padding:24px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border:1px solid #DCE4EE;border-radius:20px;overflow:hidden">
-        <tr><td style="background:#002145;padding:18px 32px;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.2px">hoppedIn</td></tr>
+        <tr><td style="background:#00204F;padding:18px 32px;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.2px">${
+          appUrl() ? `<img src="${escapeHtml(appUrl())}/brand/email-logo.png" alt="Hopped" height="24" style="display:block;height:24px;border:0">` : "Hopped"
+        }</td></tr>
         <tr><td style="padding:28px 32px 8px">
           ${firstName ? `<p style="margin:0 0 8px;font-size:14px;color:#6B7C93">Hi ${escapeHtml(firstName)},</p>` : ""}
           <h1 style="margin:0 0 10px;font-size:20px;line-height:1.3;color:#002145">${escapeHtml(notice.title)}</h1>
@@ -188,7 +190,7 @@ function emailHtml(notice: Notice, link: string | null, firstName: string | null
         ${button}
       </table>
       <p style="max-width:480px;margin:16px auto 0;font-size:12px;line-height:1.5;color:#6B7C93">
-        You're getting this because you're in a hoppedIn commute pod. Turn on notifications in the app to get these as alerts instead of email.
+        You're getting this because you're in a Hopped commute pod. Turn on notifications in the app to get these as alerts instead of email.
       </p>
     </td></tr>
   </table>
