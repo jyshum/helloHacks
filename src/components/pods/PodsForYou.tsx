@@ -145,20 +145,25 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                 )}
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
+              {/* Your week with this pod: blue fits, amber drives but the time is off, grey no ride */}
+              <div className="mt-4 flex items-center justify-between gap-2">
                 <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((d) => (
+                  {(p.week.length ? p.week : [1, 2, 3, 4, 5].map((d) => ({ day: d, state: p.days.includes(d) ? "fit" : "none", gap: null }))).map((w) => (
                     <span
-                      key={d}
+                      key={w.day}
                       className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                        p.days.includes(d) ? "bg-ubc text-white" : "bg-ink/5 text-muted/60"
+                        w.state === "fit" ? "bg-ubc text-white" : w.state === "off" ? "bg-amber-100 text-amber-700 ring-1 ring-amber-300" : "bg-ink/5 text-muted/60"
                       }`}
                     >
-                      {DAY[d]}
+                      {DAY[w.day]}
                     </span>
                   ))}
                 </div>
-                {p.varies && <span className="chip bg-ink/5 text-muted">Times vary</span>}
+                {offLabel(p) ? (
+                  <span className="chip whitespace-nowrap bg-amber-100 text-amber-700">{offLabel(p)}</span>
+                ) : (
+                  p.varies && <span className="chip whitespace-nowrap bg-ink/5 text-muted">Times vary</span>
+                )}
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]">
@@ -226,4 +231,13 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
       </Link>
     </main>
   );
+}
+
+// "Fri 15 min late" for the one day whose time doesn't fit, or "2 days off" for more.
+function offLabel(p: PodCard): string | null {
+  const off = p.week.filter((w) => w.state === "off");
+  if (!off.length) return null;
+  if (off.length > 1) return `${off.length} days off`;
+  const g = off[0].gap ?? 0;
+  return `${DAY_NAME[off[0].day]} ${Math.abs(g)} min ${g > 0 ? "late" : "early"}`;
 }

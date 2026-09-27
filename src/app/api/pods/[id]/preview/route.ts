@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
-import { fitFor } from "@/lib/pods/match";
+import { dayStates, fitFor } from "@/lib/pods/match";
 import { arriveOn, fromMinutes, pickupOn } from "@/lib/pods/time";
 import { publicRouteStart } from "@/lib/pods/route";
 import type { Weekday } from "@/lib/pods/types";
@@ -38,6 +38,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   // in pickup order (so the map draws the pod's real drive). Other days say why not.
   const firstName = (driver?.full_name ?? "Driver").split(" ")[0];
   const DAYS = ["", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays"];
+  const week = dayStates(dp, profile, fit.days, covered);
   const schedule = ([1, 2, 3, 4, 5] as Weekday[]).map((d) => {
     const drives = dp.days.includes(d);
     const others = (members ?? [])
@@ -56,7 +57,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       const gap = arriveOn(profile, d) - arriveOn(dp, d);
       note = gap < 0 ? `Gets there ${-gap} min too late for you` : `Gets there ${gap} min too early for you`;
     }
-    return { day: d, ok, note, drives, pickupTime: mine, arriveBy, youNeed, riders: others.length, stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })) };
+    return { day: d, state: week[d - 1].state, ok, note, drives, pickupTime: mine, arriveBy, youNeed, riders: others.length, stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })) };
   });
 
   const day = fit.days[0] as Weekday;

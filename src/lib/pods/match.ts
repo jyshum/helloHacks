@@ -267,7 +267,7 @@ export async function fillDriverPod(driverId: string): Promise<number> {
 }
 
 // Days a rider already has covered by pods they're in (or have asked to join).
-async function coveredDays(riderId: string): Promise<{ days: Set<number>; podIds: Set<string> }> {
+export async function coveredDays(riderId: string): Promise<{ days: Set<number>; podIds: Set<string> }> {
   const { data } = await createAdminClient()
     .from("pod_members")
     .select("pod_id, days, pod:pods!inner(status)")
@@ -278,6 +278,22 @@ async function coveredDays(riderId: string): Promise<{ days: Set<number>; podIds
   const days = new Set<number>();
   (data ?? []).forEach((m) => (m.days as number[]).forEach((d) => days.add(d)));
   return { days, podIds: new Set((data ?? []).map((m) => m.pod_id)) };
+}
+
+// How each weekday looks for a rider in a pod: fits, drives but the time is off, or no ride.
+export type DayState = { day: Weekday; state: "fit" | "off" | "none"; gap: number | null };
+export function dayStates(
+  driver: Pick<CommuteProfile, "days" | "arrive_by" | "day_times">,
+  rider: Pick<CommuteProfile, "days" | "arrive_by" | "day_times">,
+  fitDays: number[],
+  covered: number[] = []
+): DayState[] {
+  return ([1, 2, 3, 4, 5] as Weekday[]).map((day) => {
+    if (fitDays.includes(day)) return { day, state: "fit", gap: null };
+    if (!driver.days.includes(day) || !rider.days.includes(day) || covered.includes(day)) return { day, state: "none", gap: null };
+    // Minutes the driver arrives after (+) or before (-) the rider needs to be there.
+    return { day, state: "off", gap: arriveOn(driver, day) - arriveOn(rider, day) };
+  });
 }
 
 export type PodOption = { podId: string; driverId: string; fit: Fit };

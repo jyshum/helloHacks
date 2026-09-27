@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
-import { podOptions } from "@/lib/pods/match";
+import { coveredDays, dayStates, podOptions, type DayState } from "@/lib/pods/match";
 import { arriveOn, fromMinutes } from "@/lib/pods/time";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,7 @@ export type PodCard = {
   riders: { id: string; full_name: string; photo_url: string | null }[];
   seatsLeft: number;
   days: number[];
+  week: DayState[]; // each weekday: fits you, drives but time is off, or no ride
   pickupLabel: string;
   pickupTime: string;
   arriveBy: string; // driver's arrival on your first shared day
@@ -36,10 +37,10 @@ export async function GET() {
   const admin = createAdminClient();
   const podIds = options.map((o) => o.podId);
   const driverIds = options.map((o) => o.driverId);
-  const [{ data: drivers }, { data: cars }, { data: profiles }, { data: members }, { data: podRows }] = await Promise.all([
+  const [{ data: drivers }, { data: cars }, { data: profiles }, { data: members }, { data: podRows }, { data: mine }, covered] = await Promise.all([
     admin.from("users").select("id, full_name, photo_url, faculty, year, rating_avg, license_verified").in("id", driverIds),
     admin.from("vehicles").select("user_id, make_model, color, photo_url").in("user_id", driverIds),
-    admin.from("commute_profiles").select("user_id, home_area, campus_label, seats, arrive_by, day_times").in("user_id", driverIds),
+    admin.from("commute_profiles").select("user_id, home_area, campus_label, seats, days, arrive_by, day_times").in("user_id", driverIds),
     admin
       .from("pod_members")
       .select("pod_id, user_id, status, user:users!pod_members_user_id_fkey(id, full_name, photo_url)")
@@ -47,7 +48,10 @@ export async function GET() {
       .eq("role", "rider")
       .in("status", ["invited", "requested", "active"]),
     admin.from("pods").select("id, campus_label").in("id", podIds),
+    admin.from("commute_profiles").select("days, arrive_by, day_times").eq("user_id", me.id).single(),
+    coveredDays(me.id),
   ]);
+  const coveredList = Array.from(covered.days);
 
   const pods: PodCard[] = options.map((o) => {
     const d = drivers!.find((x) => x.id === o.driverId)!;
@@ -67,6 +71,7 @@ export async function GET() {
         .filter(Boolean),
       seatsLeft: (p?.seats ?? 3) - taken,
       days: o.fit.days,
+      week: p && mine ? dayStates({ ...p, day_times: p.day_times ?? {} }, { ...mine, day_times: mine.day_times ?? {} }, o.fit.days, coveredList) : [],
       pickupLabel: o.fit.pickupLabel,
       pickupTime: o.fit.pickupTime,
       arriveBy: p ? fromMinutes(arriveOn({ arrive_by: p.arrive_by, day_times: p.day_times ?? {} }, o.fit.days[0])) : "09:00",
