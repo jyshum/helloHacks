@@ -27,6 +27,7 @@ import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import Avatar from "@/components/Avatar";
 import SharedBadge from "@/components/SharedBadge";
+import EnableNotifications from "@/components/pods/EnableNotifications";
 import { decodePolyline, type LatLng } from "@/lib/geo";
 import { dayWord, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
 import { WEEKDAY_LABELS, type Weekday } from "@/lib/pods/types";
@@ -173,6 +174,9 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
                 <span className="block text-sm text-muted">Updates and messages with your pod</span>
               </span>
             </Link>
+            <div className="mt-3">
+              <EnableNotifications />
+            </div>
 
             {/* Driver: approvals */}
             {isDriver && requests.length > 0 && (
@@ -315,7 +319,7 @@ function InviteCard({
   const { driver, vehicle, riders, driverProfile } = view;
   return (
     <div>
-      <p className="text-center text-sm font-semibold uppercase tracking-wide text-blue">We found your pod 🎉</p>
+      <p className="text-center text-sm font-semibold uppercase tracking-wide text-blue">We found your pod</p>
       <div className="card mt-3 p-5">
         <div className="flex items-center gap-4">
           <Link href={`/profile/${driver.user_id}`}><Avatar name={driver.user.full_name} photoUrl={driver.user.photo_url} size={64} /></Link>
@@ -480,8 +484,8 @@ function TripCard({
   const firstRequestId = Object.values(trip.requestIdByUser)[0];
 
   let status = "";
-  if (trip.status === "live") status = isDriver ? "You're on the way" : `${driverName} is on the way 🚗`;
-  else if (trip.status === "confirmed") status = isDriver ? "You confirmed. Thanks!" : `${driverName} confirmed ✅`;
+  if (trip.status === "live") status = isDriver ? "You're on the way" : `${driverName} is on the way`;
+  else if (trip.status === "confirmed") status = isDriver ? "You confirmed. Thanks!" : `${driverName} confirmed`;
   else if (trip.status === "cancelled") status = isDriver ? "You're not driving" : `${driverName} can't drive`;
   else if (trip.status === "missed") status = "Driver didn't show";
   else if (trip.status === "completed") status = "Done. Nice commute!";

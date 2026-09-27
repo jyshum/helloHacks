@@ -30,7 +30,7 @@ export async function confirmTrip(podId: string, date: string, driverName: strin
   if (trip.status === "live" || trip.status === "completed") return trip;
   await admin.from("pod_trips").update({ status: "confirmed", confirmed_at: new Date().toISOString() }).eq("id", trip.id);
   const when = dayWord(date);
-  await postSystemMessage(podId, `✅ ${driverName} confirmed ${when}${leaveAt ? `, first pickup ${prettyTime(leaveAt)}` : ""}.`);
+  await postSystemMessage(podId, `${driverName} confirmed ${when}${leaveAt ? `, first pickup ${prettyTime(leaveAt)}` : ""}.`);
   await notify(await riderIds(admin, podId, date), {
     kind: "trip_confirmed",
     title: `${driverName} is driving ${when}`,
@@ -47,7 +47,7 @@ export async function cancelTrip(podId: string, date: string, driverName: string
   await admin.from("pod_trips").update({ status: "cancelled" }).eq("id", trip.id);
   if (trip.ride_id) await admin.from("rides").update({ status: "cancelled" }).eq("id", trip.ride_id);
   const when = dayWord(date);
-  await postSystemMessage(podId, `❌ ${driverName} can't drive ${when}.`);
+  await postSystemMessage(podId, `${driverName} can't drive ${when}.`);
   await notify(await riderIds(admin, podId, date), {
     kind: "trip_cancelled",
     title: `No pod ride ${when}`,
@@ -107,7 +107,7 @@ export async function startTrip(podId: string, date: string) {
     );
   }
   await admin.from("pod_trips").update({ status: "live", ride_id: ride!.id }).eq("id", trip.id);
-  await postSystemMessage(podId, `🚗 ${driver!.full_name.split(" ")[0]} is on the way. Track the car live from the pod screen.`);
+  await postSystemMessage(podId, `${driver!.full_name.split(" ")[0]} is on the way. Track the car live from the pod screen.`);
   await notify(ids, {
     kind: "trip_confirmed",
     title: `${driver!.full_name.split(" ")[0]} is on the way`,

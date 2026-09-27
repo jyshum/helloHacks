@@ -31,10 +31,10 @@ export async function POST(req: Request, { params }: { params: { id: string; mem
     .eq("id", m.id);
 
   if (action === "approve") {
-    await postSystemMessage(params.id, `👋 ${name} joined the pod.`);
+    await postSystemMessage(params.id, `${name} joined the pod.`);
     await notify([m.user_id], {
       kind: "pod_approved",
-      title: "You're in the pod! 🎉",
+      title: "You're in the pod!",
       body: `${a.me.full_name} approved you. Say hi in the pod chat.`,
       url: `/pods/${params.id}`,
     });

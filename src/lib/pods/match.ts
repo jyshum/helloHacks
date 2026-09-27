@@ -213,7 +213,7 @@ async function invite(podId: string, d: Profile, r: Profile, fit: Fit) {
   const saved = fit.transitMinutes != null ? fit.transitMinutes - fit.driveMinutes : null;
   await notify([r.user_id], {
     kind: "pod_invite",
-    title: "We found your commute pod 🎉",
+    title: "We found your commute pod",
     body: saved && saved > 5 ? `Ride to campus and save ~${saved} min vs transit.` : "A verified UBC driver is heading your way.",
     url: "/pods",
   });
