@@ -30,7 +30,7 @@ export type PodCard = {
 export async function GET() {
   const me = await getProfile();
   if (!me) return jsonError("Sign in first.", 401);
-  const options = await podOptions(me.id, 6);
+  const options = await podOptions(me.id, 8);
   if (!options.length) return NextResponse.json({ pods: [] });
 
   const admin = createAdminClient();

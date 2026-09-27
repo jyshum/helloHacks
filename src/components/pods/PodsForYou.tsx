@@ -15,7 +15,7 @@ import type { PodCard } from "@/app/api/pods/options/route";
 const DAY = ["", "M", "T", "W", "T", "F"];
 const DAY_NAME = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
 
-export type MyPod = { podId: string; status: "active" | "requested"; days: number[]; campus: string; arriveBy: string | null; driver: { id: string; full_name: string; photo_url: string | null } };
+export type MyPod = { podId: string; status: "active" | "requested"; days: number[]; campus: string; arriveBy: string | null; varies: boolean; driver: { id: string; full_name: string; photo_url: string | null } };
 
 type Props = { me: MenuUser; area: string; arriveBy: string; myPods: MyPod[]; openDays: number[] };
 
@@ -77,7 +77,7 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                   <span className="block font-semibold text-ink">{p.driver.full_name.split(" ")[0]}&apos;s pod</span>
                   <span className="block text-[13px] text-muted">
                     {p.days.map((d) => DAY_NAME[d]).join(", ")}
-                    {p.arriveBy && ` · ${shortCampus(p.campus)} by ${prettyTime(p.arriveBy)}`}
+                    {p.arriveBy && (p.varies ? ` · ${shortCampus(p.campus)} · times vary` : ` · ${shortCampus(p.campus)} by ${prettyTime(p.arriveBy)}`)}
                     {p.status === "requested" && " · Pending"}
                   </span>
                 </span>
@@ -158,15 +158,17 @@ export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Pro
                     </span>
                   ))}
                 </div>
+                {p.varies && <span className="chip bg-ink/5 text-muted">Times vary</span>}
               </div>
 
-              <div className="mt-3 flex items-center gap-2 text-[15px]">
-                <span className="font-semibold text-ink">{prettyTime(p.pickupTime)}</span>
-                <span className="text-muted">pickup</span>
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]">
+                <span className="whitespace-nowrap">
+                  <span className="font-semibold text-ink">{prettyTime(p.pickupTime)}</span> <span className="text-muted">pickup</span>
+                </span>
                 <ArrowRight size={15} className="text-muted/60" aria-hidden />
-                <span className="font-semibold text-ink">{shortCampus(p.campus)}</span>
-                <span className="text-muted">by {prettyTime(p.arriveBy)}</span>
-                {p.varies && <span className="chip bg-ink/5 text-muted">varies</span>}
+                <span className="whitespace-nowrap">
+                  <span className="font-semibold text-ink">{shortCampus(p.campus)}</span> <span className="text-muted">by {prettyTime(p.arriveBy)}</span>
+                </span>
               </div>
 
               <div className="mt-4 flex items-center justify-between">

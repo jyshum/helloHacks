@@ -4,8 +4,7 @@ import { getProfile } from "@/lib/profile";
 import { jsonError } from "@/lib/api";
 import { fitFor } from "@/lib/pods/match";
 import { arriveOn, fromMinutes, pickupOn } from "@/lib/pods/time";
-import { driveRouteVia } from "@/lib/pods/directions";
-import { decodePolyline, haversineKm } from "@/lib/geo";
+import { publicRouteStart } from "@/lib/pods/route";
 import type { Weekday } from "@/lib/pods/types";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     admin.from("vehicles").select("make_model, color, photo_url, is_ev").eq("user_id", dp.user_id).maybeSingle(),
     admin
       .from("pod_members")
-      .select("days, user:users!pod_members_user_id_fkey(id, full_name, photo_url, faculty, year)")
+      .select("days, pickup_lat, pickup_lng, pickup_time, user:users!pod_members_user_id_fkey(id, full_name, photo_url, faculty, year)")
       .eq("pod_id", params.id)
       .eq("role", "rider")
       .eq("status", "active")
@@ -33,41 +32,40 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     admin.from("pods").select("campus_label, campus_lat, campus_lng").eq("id", params.id).single(),
   ]);
 
-  // The driver's normal drive with a stop at your pickup. The first ~400 m are cut
-  // so the driver's exact address isn't shown.
-  let route: { lat: number; lng: number }[] = [];
   const campusPos = pod ? { lat: pod.campus_lat, lng: pod.campus_lng } : { lat: dp.campus_lat, lng: dp.campus_lng };
-  const encoded = await driveRouteVia({ lat: dp.home_lat, lng: dp.home_lng }, fit.pickup, campusPos);
-  if (encoded) {
-    const path = decodePolyline(encoded);
-    let km = 0, start = 0;
-    for (let i = 1; i < path.length && km < 0.4; i++) {
-      km += haversineKm(path[i - 1], path[i]);
-      start = i;
-    }
-    route = path.slice(start);
-  }
 
   // Each of your days, with that day's times (drivers can arrive at different times per day).
-  const schedule = fit.days.map((d) => ({
-    day: d,
-    pickupTime: pickupOn(fit.pickupTime, dp, fit.days, d) ?? fit.pickupTime,
-    arriveBy: fromMinutes(arriveOn(dp, d as Weekday)),
-    youNeed: fromMinutes(arriveOn(rp, d as Weekday)),
-  }));
+  // …and that day's stops in pickup order (other riders who ride that day + you),
+  // so the map can draw the pod's real drive for the day you tap.
+  const schedule = fit.days.map((d) => {
+    const mine = pickupOn(fit.pickupTime, dp, fit.days, d) ?? fit.pickupTime;
+    const others = (members ?? [])
+      .filter((m) => (m.days as number[]).includes(d) && m.pickup_lat != null)
+      .map((m) => ({ lat: m.pickup_lat as number, lng: m.pickup_lng as number, me: false, time: pickupOn(m.pickup_time, dp, m.days as number[], d) ?? "99:99" }));
+    const stops = [...others, { lat: fit.pickup.lat, lng: fit.pickup.lng, me: true, time: mine }].sort((a, b) => a.time.localeCompare(b.time));
+    return {
+      day: d,
+      pickupTime: mine,
+      arriveBy: fromMinutes(arriveOn(dp, d as Weekday)),
+      youNeed: fromMinutes(arriveOn(rp, d as Weekday)),
+      riders: others.length,
+      stops: stops.map(({ lat, lng, me }) => ({ lat, lng, me })),
+    };
+  });
 
   const day = fit.days[0] as Weekday;
   return NextResponse.json({
     podId: params.id,
     campus: pod?.campus_label ?? dp.campus_label,
-    campusPos: pod ? { lat: pod.campus_lat, lng: pod.campus_lng } : null,
+    campusPos,
+    routeStart: publicRouteStart(dp.route_polyline, { lat: dp.home_lat, lng: dp.home_lng }),
     driver: { ...driver, rating_avg: Number(driver?.rating_avg ?? 5), license_verified: !!driver?.license_verified },
     car: car ?? null,
     reliability: {
       completed: (trips ?? []).filter((t) => t.status === "completed").length,
       total: (trips ?? []).length,
     },
-    riders: (members ?? []).map((m) => m.user).filter(Boolean),
+    riders: (members ?? []).map((m) => ({ ...(m.user as unknown as object), days: m.days })).filter(Boolean),
     seatsLeft: dp.seats - (members ?? []).length,
     fit: {
       days: fit.days,
@@ -81,7 +79,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       detourMinutes: fit.detourMinutes,
     },
     schedule,
-    route,
     me: { faculty: me.faculty, year: me.year },
   });
 }

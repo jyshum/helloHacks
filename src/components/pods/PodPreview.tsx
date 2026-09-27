@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { APIProvider } from "@vis.gl/react-google-maps";
 import { BadgeCheck, GraduationCap, MapPin, Timer, X } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
+import PodRouteLine from "@/components/pods/PodRouteLine";
 import Avatar from "@/components/Avatar";
 import { prettyTime } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
@@ -34,8 +35,8 @@ type Preview = {
     transitMinutes: number | null;
     detourMinutes: number;
   };
-  route: LatLng[];
-  schedule: { day: number; pickupTime: string; arriveBy: string; youNeed: string }[];
+  routeStart: LatLng;
+  schedule: { day: number; pickupTime: string; arriveBy: string; youNeed: string; riders: number; stops: (LatLng & { me: boolean })[] }[];
   me: { faculty: string | null; year: number | null };
 };
 
@@ -79,17 +80,22 @@ export default function PodPreview({
       >
         {/* Map: your pickup → campus */}
         <div className="relative h-[34%] shrink-0 overflow-hidden">
-          {data && (
+          {data && today && (
             <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
               <BaseMap
                 pins={[
-                  { id: "me", pos: data.fit.pickup, kind: "rider", name: meName, photo: mePhoto },
+                  ...today.stops.map((st, i) =>
+                    st.me
+                      ? { id: "me", pos: { lat: st.lat, lng: st.lng }, kind: "rider" as const, name: meName, photo: mePhoto }
+                      : { id: `s${i}`, pos: { lat: st.lat, lng: st.lng }, kind: "pickup" as const }
+                  ),
                   ...(data.campusPos ? [{ id: "campus", pos: data.campusPos, kind: "dropoff" as const }] : []),
                 ]}
-                routes={data.route.length ? [{ id: "r", path: data.route, color: "#0055B7", opacity: 0.85, weight: 5 }] : []}
-                fit={[...(data.route.length ? [data.route[0]] : []), data.fit.pickup, ...(data.campusPos ? [data.campusPos] : [])]}
+                fit={[data.routeStart, ...today.stops, ...(data.campusPos ? [data.campusPos] : [])]}
                 bottomPadding={30}
-              />
+              >
+                {data.campusPos && <PodRouteLine start={data.routeStart} stops={today.stops} end={data.campusPos} />}
+              </BaseMap>
             </APIProvider>
           )}
           <button onClick={onClose} className="glass absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full" aria-label="Close">
@@ -159,6 +165,9 @@ export default function PodPreview({
                       title={`${shortCampus(data.campus)} by ${prettyTime(today.arriveBy)}`}
                       sub={today.youNeed !== today.arriveBy ? `Your class: ${prettyTime(today.youNeed)}` : "Right on time"}
                     />
+                    <p className="py-3 text-[13px] text-muted">
+                      {today.riders ? `${today.riders + 1} riders this day` : "Just you and the driver this day"}
+                    </p>
                   </div>
                 )}
               </div>

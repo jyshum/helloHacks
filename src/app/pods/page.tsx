@@ -37,13 +37,14 @@ export default async function PodsPage() {
   const myPods: MyPod[] = (rows ?? []).map((r) => {
     const pod = r.pod as unknown as PodRow;
     const dp = dps?.find((x) => x.user_id === pod.driver_id);
-    const day = (r.days as number[])[0] as Weekday | undefined;
+    const times = dp ? Array.from(new Set((r.days as Weekday[]).map((d) => arriveOn({ arrive_by: dp.arrive_by, day_times: dp.day_times ?? {} }, d)))) : [];
     return {
       podId: r.pod_id,
       status: r.status as MyPod["status"],
       days: r.days as number[],
       campus: pod.campus_label,
-      arriveBy: dp && day ? fromMinutes(arriveOn({ arrive_by: dp.arrive_by, day_times: dp.day_times ?? {} }, day)) : null,
+      arriveBy: times.length ? fromMinutes(times[0]) : null,
+      varies: times.length > 1,
       driver: pod.driver,
     };
   });

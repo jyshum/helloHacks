@@ -283,7 +283,7 @@ async function coveredDays(riderId: string): Promise<{ days: Set<number>; podIds
 export type PodOption = { podId: string; driverId: string; fit: Fit };
 
 // The best few pods for a rider, best first. Doesn't invite anyone.
-export async function podOptions(riderId: string, limit = 6): Promise<PodOption[]> {
+export async function podOptions(riderId: string, limit = 8): Promise<PodOption[]> {
   const [profile] = await loadProfiles({ userIds: [riderId], mode: "rider" });
   if (!profile) return [];
   // Riders can be in several pods (e.g. Mon/Wed with one, Tue/Thu with another),

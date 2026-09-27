@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { nearestArea } from "@/lib/areas";
+import { publicRouteStart } from "@/lib/pods/route";
 import { arriveOn, nextDateOn, toMinutes, vancouverNow, weekdayOf } from "@/lib/pods/time";
 import type { CommuteProfile, Pod, PodMember, PodTrip, Weekday } from "@/lib/pods/types";
 import type { User, Vehicle } from "@/lib/types";
@@ -28,6 +29,7 @@ export type PodView = {
     route_minutes: number | null;
   };
   vehicle: Vehicle | null;
+  routeStart: { lat: number; lng: number }; // driver's home for the driver, a point ~400 m along the route for everyone else
   members: MemberView[]; // everyone (driver first), any status
   riders: MemberView[]; // active riders
   requests: MemberView[]; // riders waiting for driver approval
@@ -90,9 +92,11 @@ export async function loadPodView(podId: string, meUserId: string): Promise<PodV
       day_times: dp.day_times,
       seats: dp.seats,
       campus_label: dp.campus_label,
-      route_polyline: dp.route_polyline,
+      // Only the driver gets their raw route (it starts at their home).
+      route_polyline: me?.role === "driver" ? dp.route_polyline : null,
       route_minutes: dp.route_minutes,
     },
+    routeStart: me?.role === "driver" ? { lat: dp.home_lat, lng: dp.home_lng } : publicRouteStart(dp.route_polyline, { lat: dp.home_lat, lng: dp.home_lng }),
     vehicle: (vehicle as Vehicle) ?? null,
     members: safe,
     riders,

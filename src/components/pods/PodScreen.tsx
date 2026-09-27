@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
 import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, Pencil, Plus, Timer, X, Zap } from "lucide-react";
@@ -12,7 +12,8 @@ import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import Avatar from "@/components/Avatar";
 import SharedBadge from "@/components/SharedBadge";
 import EnableNotifications from "@/components/pods/EnableNotifications";
-import { decodePolyline, type LatLng } from "@/lib/geo";
+import type { LatLng } from "@/lib/geo";
+import PodRouteLine from "@/components/pods/PodRouteLine";
 import { arriveOn, dayWord, fromMinutes, pickupOn, prettyDate, prettyTime, toMinutes, vancouverNow } from "@/lib/pods/time";
 import { shortCampus } from "@/lib/places";
 import type { Weekday } from "@/lib/pods/types";
@@ -74,15 +75,22 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
     return data;
   }
 
-  const route = useMemo(() => (driverProfile.route_polyline ? decodePolyline(driverProfile.route_polyline) : []), [driverProfile.route_polyline]);
   const campus = { lat: pod.campus_lat, lng: pod.campus_lng };
-  const pickups = [...riders, ...(mine.status !== "active" && mine.role === "rider" ? [mine] : [])].filter((m) => m.pickup_lat != null);
-  const fit: LatLng[] = route.length ? [route[0], campus] : [campus];
   const driverName = first(driver.user.full_name);
   const shown = view.reliability.completed + view.reliability.missed;
-  // Arrival for your next ride (days can have different times).
-  const nextDay = nextTrip ? (new Date(`${nextTrip.date}T12:00:00Z`).getUTCDay() as Weekday) : null;
-  const arriveTime = nextDay ? fromMinutes(arriveOn(driverProfile, nextDay)) : driverProfile.arrive_by;
+
+  // Tap a day to see that day's drive: who's riding, the route through their
+  // pickups, and the times. Defaults to your next ride.
+  const myDays = (isDriver ? driverProfile.days : mine.days) as number[];
+  const nextDay = nextTrip ? new Date(`${nextTrip.date}T12:00:00Z`).getUTCDay() : null;
+  const [day, setDay] = useState<number>(nextDay && myDays.includes(nextDay) ? nextDay : myDays[0] ?? 1);
+  const arriveTime = fromMinutes(arriveOn(driverProfile, day as Weekday));
+  const riding = [...riders, ...(mine.status !== "active" && mine.role === "rider" ? [mine] : [])]
+    .filter((m) => m.pickup_lat != null && (m.days as number[]).includes(day))
+    .map((m) => ({ m, time: pickupOn(m.pickup_time, driverProfile, m.days as number[], day) ?? "99:99" }))
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const stops: LatLng[] = riding.map(({ m }) => ({ lat: m.pickup_lat!, lng: m.pickup_lng! }));
+  const myTime = riding.find((x) => x.m.user_id === mine.user_id)?.time ?? null;
 
   return (
     <div className="relative min-h-[100dvh]">
@@ -90,13 +98,14 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
       <div className="relative h-[40dvh] w-full overflow-hidden">
         <BaseMap
           pins={[
-            ...pickups.map((m) => ({ id: m.id, pos: { lat: m.pickup_lat!, lng: m.pickup_lng! }, kind: "rider" as const, name: m.user.full_name, photo: m.user.photo_url })),
+            ...riding.map(({ m }) => ({ id: m.id, pos: { lat: m.pickup_lat!, lng: m.pickup_lng! }, kind: "rider" as const, name: m.user.full_name, photo: m.user.photo_url })),
             { id: "campus", pos: campus, kind: "dropoff" as const },
           ]}
-          routes={route.length ? [{ id: "route", path: route, color: "#0055B7", opacity: 0.85, weight: 5 }] : []}
-          fit={fit}
+          fit={[view.routeStart, ...stops, campus]}
           bottomPadding={40}
-        />
+        >
+          <PodRouteLine start={view.routeStart} stops={stops} end={campus} />
+        </BaseMap>
         <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-app items-center justify-between p-4">
           <div className="flex items-center gap-2">
             <ProfileMenu me={me} mode={isDriver ? "driver" : "rider"} />
@@ -150,13 +159,19 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
 
         {inPod && (
           <div className="rise">
-            <h1 className="text-[28px] font-bold leading-tight text-ubc">
+            <DayPicker days={myDays} value={day} onChange={setDay} />
+            <h1 className="mt-4 text-[28px] font-bold leading-tight text-ubc">
               {shortCampus(pod.campus_label)} by {prettyTime(arriveTime)}
             </h1>
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-[15px] text-muted">from {driverProfile.home_area ?? "home"}</p>
-              <DayDots days={isDriver ? driverProfile.days : mine.days} />
-            </div>
+            <p className="mt-1 text-[15px] text-muted">
+              {isDriver
+                ? riding.length
+                  ? `${riding.length} ${riding.length === 1 ? "rider" : "riders"} · first pickup ${prettyTime(riding[0].time)}`
+                  : "No riders this day"
+                : myTime
+                  ? `Pickup ${prettyTime(myTime)} · ${mine.pickup_label ?? ""}`
+                  : `from ${driverProfile.home_area ?? "home"}`}
+            </p>
 
             {nextTrip && <TripCard view={view} isDriver={isDriver} busy={busy} call={call} />}
 
@@ -165,7 +180,9 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
               <div className="no-scrollbar flex gap-4 overflow-x-auto">
                 <Person m={driver} label={isDriver ? "You" : driverName} driver />
                 {riders.map((m) => (
-                  <Person key={m.id} m={m} label={m.user_id === mine.user_id ? "You" : first(m.user.full_name)} />
+                  <div key={m.id} className={(m.days as number[]).includes(day) ? "" : "opacity-35"}>
+                    <Person m={m} label={m.user_id === mine.user_id ? "You" : first(m.user.full_name)} />
+                  </div>
                 ))}
                 {isDriver &&
                   Array.from({ length: Math.max(0, view.seatsLeft) }).map((_, i) => (
@@ -233,6 +250,33 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
 }
 
 // ---------------------------------------------------------------------------------
+
+const DAY_NAME = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
+
+// Your days in this pod as tappable chips; others are greyed out.
+function DayPicker({ days, value, onChange }: { days: number[]; value: number; onChange: (d: number) => void }) {
+  return (
+    <div className="flex gap-1.5">
+      {[1, 2, 3, 4, 5].map((d) => {
+        const mine = days.includes(d);
+        const on = d === value;
+        return (
+          <button
+            key={d}
+            disabled={!mine}
+            onClick={() => onChange(d)}
+            aria-pressed={on}
+            className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
+              on ? "bg-ubc text-white shadow-glow" : mine ? "bg-ubc/10 text-ubc" : "bg-ink/[0.03] text-muted/40"
+            }`}
+          >
+            {DAY_NAME[d]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function DayDots({ days }: { days: number[] }) {
   return (
