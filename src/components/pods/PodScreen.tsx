@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { AlertTriangle, BadgeCheck, Car, Check, ChevronRight, Clock, MessageCircle, Navigation, Pencil, Plus, Timer, X, Zap } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Car, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Navigation, Pencil, Plus, Timer, X, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
@@ -93,7 +93,14 @@ function Screen({ view, me, meFaculty, meYear }: Props) {
           bottomPadding={40}
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-app items-center justify-between p-4">
-          <ProfileMenu me={me} mode={isDriver ? "driver" : "rider"} />
+          <div className="flex items-center gap-2">
+            <ProfileMenu me={me} mode={isDriver ? "driver" : "rider"} />
+            {!isDriver && (
+              <Link href="/pods" className="glass pointer-events-auto flex h-11 items-center gap-1 rounded-full pl-2.5 pr-4 text-sm font-semibold text-ubc" aria-label="My pods">
+                <ChevronLeft size={18} aria-hidden /> Pods
+              </Link>
+            )}
+          </div>
           <div className="pointer-events-auto flex gap-2">
             {inPod && (
               <Link href={`/pods/${pod.id}/chat`} className="glass flex h-11 w-11 items-center justify-center rounded-full text-ubc" aria-label="Pod chat">
@@ -381,7 +388,9 @@ function TripCard({
   const day = dayWord(trip.date);
   const isToday = trip.date === vancouverNow().date;
   const skipping = trip.skippedUserIds.includes(mine.user_id);
-  const coming = riders.filter((r) => !trip.skippedUserIds.includes(r.user_id));
+  const weekday = new Date(`${trip.date}T12:00:00Z`).getUTCDay();
+  const ridingThatDay = riders.filter((r) => (r.days as number[]).includes(weekday));
+  const coming = ridingThatDay.filter((r) => !trip.skippedUserIds.includes(r.user_id));
   const firstPickup = coming.map((r) => r.pickup_time).filter(Boolean).sort()[0] ?? null;
   const url = `/api/pods/${pod.id}/trip`;
 
@@ -427,7 +436,7 @@ function TripCard({
 
       {isDriver && coming.length > 0 && trip.status !== "cancelled" && (
         <div className="mt-3 flex flex-col gap-2">
-          {riders.map((r) => {
+          {ridingThatDay.map((r) => {
             const skip = trip.skippedUserIds.includes(r.user_id);
             return (
               <div key={r.id} className={`flex items-center gap-3 text-sm ${skip ? "opacity-40" : ""}`}>

@@ -100,15 +100,17 @@ export async function loadPodView(podId: string, meUserId: string): Promise<PodV
     invited,
     seatsLeft: dp.seats - riders.length - requests.length - invited.length,
     reliability,
-    nextTrip: await loadNextTrip(podId, dp),
+    // Riders only ride on their own days in this pod.
+    nextTrip: await loadNextTrip(podId, dp, me && me.role === "rider" && me.days.length ? (me.days as Weekday[]) : undefined),
   };
 }
 
 // The pod's next commute day (today until 30 min after arrival, then the next one).
-async function loadNextTrip(podId: string, dp: CommuteProfile): Promise<TripView | null> {
+async function loadNextTrip(podId: string, dp: CommuteProfile, onlyDays?: Weekday[]): Promise<TripView | null> {
+  const days = onlyDays ?? dp.days;
   const today = vancouverNow();
-  const todayCutoff = dp.days.includes(today.weekday as Weekday) ? arriveOn(dp, today.weekday as Weekday) + 30 : 0;
-  const date = nextDateOn(dp.days, todayCutoff);
+  const todayCutoff = days.includes(today.weekday as Weekday) ? arriveOn(dp, today.weekday as Weekday) + 30 : 0;
+  const date = nextDateOn(days, todayCutoff);
   if (!date) return null;
 
   const admin = createAdminClient();

@@ -78,7 +78,7 @@ export default function ProfileMenu({
             </Link>
 
             <nav className="flex flex-col py-2">
-              <MenuItem href="/pods" label="My pod" icon={Users} onClick={() => setOpen(false)} />
+              <MenuItem href="/pods" label="My pods" icon={Users} onClick={() => setOpen(false)} />
               <MenuItem href="/map" label="Ride today" icon={House} onClick={() => setOpen(false)} />
               <MenuItem href="/trips" label="Your trips" icon={Clock} onClick={() => setOpen(false)} />
               {me.isAdmin && (

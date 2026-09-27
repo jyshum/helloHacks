@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notify";
 import { postSystemMessage } from "@/lib/pods/chat";
-import { dayWord, prettyTime } from "@/lib/pods/time";
+import { dayWord, prettyTime, weekdayOf } from "@/lib/pods/time";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -13,8 +13,10 @@ export async function getOrCreateTrip(admin: Admin, podId: string, date: string)
 }
 
 async function riderIds(admin: Admin, podId: string, date?: string): Promise<string[]> {
-  const { data } = await admin.from("pod_members").select("user_id").eq("pod_id", podId).eq("role", "rider").eq("status", "active");
-  let ids = (data ?? []).map((m) => m.user_id);
+  const { data } = await admin.from("pod_members").select("user_id, days").eq("pod_id", podId).eq("role", "rider").eq("status", "active");
+  let ids = (data ?? [])
+    .filter((m) => !date || (m.days as number[]).includes(weekdayOf(date)))
+    .map((m) => m.user_id);
   if (date) {
     const { data: skips } = await admin.from("pod_skips").select("user_id").eq("pod_id", podId).eq("trip_date", date);
     const skipped = new Set((skips ?? []).map((s) => s.user_id));

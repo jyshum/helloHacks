@@ -7,6 +7,7 @@ import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { ChevronRight, GraduationCap } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
+import PodsButton from "@/components/app/PodsButton";
 import { useMyLocation } from "@/components/app/hooks";
 import { useLiveDrivers } from "@/components/app/useLiveDrivers";
 import Avatar from "@/components/Avatar";
@@ -128,7 +129,10 @@ export default function DriverHome({ me, onSwitchMode }: { me: DriverMe; onSwitc
       </BaseMap>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 mx-auto flex max-w-app items-center justify-between p-4">
-        <ProfileMenu me={me} mode="driver" onSwitchMode={onSwitchMode} />
+        <div className="flex items-center gap-2">
+          <ProfileMenu me={me} mode="driver" onSwitchMode={onSwitchMode} />
+          <PodsButton />
+        </div>
         <span
           className={`pointer-events-auto rounded-full px-4 py-2 font-heading text-sm font-semibold shadow-lift ${
             online ? "bg-green text-white" : "bg-white text-ink"

@@ -4,26 +4,36 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Car, Pencil, Search, Timer, Zap } from "lucide-react";
+import { BadgeCheck, Car, ChevronRight, Pencil, Search, Timer, Zap } from "lucide-react";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import Avatar from "@/components/Avatar";
 import { prettyTime } from "@/lib/pods/time";
 import type { PodCard } from "@/app/api/pods/options/route";
 
 const DAY = ["", "M", "T", "W", "T", "F"];
+const DAY_NAME = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
 
-export default function PodsForYou({ me, area, arriveBy }: { me: MenuUser; area: string; arriveBy: string }) {
+export type MyPod = { podId: string; status: "active" | "requested"; days: number[]; driver: { id: string; full_name: string; photo_url: string | null } };
+
+type Props = { me: MenuUser; area: string; arriveBy: string; myPods: MyPod[]; openDays: number[] };
+
+export default function PodsForYou({ me, area, arriveBy, myPods, openDays }: Props) {
   const router = useRouter();
   const [pods, setPods] = useState<PodCard[] | null>(null);
   const [joining, setJoining] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Re-fetch whenever the days still needing a pod change (e.g. right after joining one).
+  const openKey = openDays.join(",");
+  const myKey = myPods.map((p) => p.podId).join(",");
   useEffect(() => {
+    if (!openKey) return setPods([]);
+    setPods(null);
     fetch("/api/pods/options", { cache: "no-store" })
       .then((r) => r.json())
       .then((b) => setPods(b.pods ?? []))
       .catch(() => setPods([]));
-  }, []);
+  }, [openKey, myKey]);
 
   async function join(podId: string) {
     setJoining(podId);
@@ -34,7 +44,7 @@ export default function PodsForYou({ me, area, arriveBy }: { me: MenuUser; area:
       setJoining(null);
       return setError(body.error ?? "Couldn't join.");
     }
-    router.push(`/pods/${podId}`);
+    setJoining(null);
     router.refresh();
   }
 
@@ -47,10 +57,40 @@ export default function PodsForYou({ me, area, arriveBy }: { me: MenuUser; area:
         </Link>
       </div>
 
-      <h1 className="mt-8 text-[34px] font-bold leading-none text-ubc">Pods for you</h1>
-      <p className="mt-2 text-muted">
-        {area} <span className="mx-1 text-muted/50">→</span> UBC · {prettyTime(arriveBy)}
-      </p>
+      {myPods.length > 0 && (
+        <>
+          <h1 className="mt-8 text-[34px] font-bold leading-none text-ubc">My pods</h1>
+          <div className="mt-5 flex flex-col gap-3">
+            {myPods.map((p) => (
+              <Link key={p.podId} href={`/pods/${p.podId}`} className="card rise flex items-center gap-3 p-4">
+                <span className="relative">
+                  <Avatar name={p.driver.full_name} photoUrl={p.driver.photo_url} size={46} />
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-ubc text-white">
+                    <Car size={11} aria-hidden />
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-ink">{p.driver.full_name.split(" ")[0]}&apos;s pod</span>
+                  <span className="block text-[13px] text-muted">
+                    {p.days.map((d) => DAY_NAME[d]).join(", ")}
+                    {p.status === "requested" && " · Pending"}
+                  </span>
+                </span>
+                <ChevronRight size={18} className="text-muted" aria-hidden />
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {openDays.length > 0 && (
+        <>
+          <h1 className={`${myPods.length ? "mt-10 text-2xl" : "mt-8 text-[34px]"} font-bold leading-none text-ubc`}>Pods for you</h1>
+          <p className="mt-2 text-muted">
+            {myPods.length ? openDays.map((d) => DAY_NAME[d]).join(", ") : <>{area} <span className="mx-1 text-muted/50">→</span> UBC · {prettyTime(arriveBy)}</>}
+          </p>
+        </>
+      )}
 
       {error && <p className="mt-4 rounded-2xl bg-red-50/80 px-4 py-3 text-sm text-red-700">{error}</p>}
 
@@ -129,7 +169,7 @@ export default function PodsForYou({ me, area, arriveBy }: { me: MenuUser; area:
           );
         })}
 
-        {pods?.length === 0 && (
+        {pods?.length === 0 && openDays.length > 0 && (
           <div className="card rise flex flex-col items-center p-8 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/80 text-ubc shadow-soft">
               <Search size={24} aria-hidden />

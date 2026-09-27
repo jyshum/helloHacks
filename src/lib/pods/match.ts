@@ -9,8 +9,8 @@ import { arriveOn, fromMinutes, nextDateOn, vancouverTime } from "@/lib/pods/tim
 import type { CommuteProfile, Weekday } from "@/lib/pods/types";
 
 // --- Tunables ---------------------------------------------------------------
-export const MAX_EARLY_MINUTES = 15; // driver may arrive up to this much before the rider needs to
-const MAX_ROUTE_DISTANCE_KM = 3; // rider home must be this close to the driver's route
+export const MAX_EARLY_MINUTES = 20; // driver may arrive up to this much before the rider needs to
+const MAX_ROUTE_DISTANCE_KM = 3.5; // rider home must be this close to the driver's route
 const ON_ROUTE_KM = 0.8; // within this, the rider walks to a pickup spot on the route
 const PICKUP_BUFFER_MINUTES = 5;
 
@@ -180,13 +180,14 @@ async function busyRiderIds(): Promise<Set<string>> {
   return new Set((data ?? []).map((m) => m.user_id));
 }
 
-// Pods a rider said no to (or was declined from) are never re-offered.
-async function excludedPods(riderId: string): Promise<Set<string>> {
+// Pods a rider passed on (or was declined from) are never offered again.
+// Pods they left are only hidden from driver-side invites, not from their own choices.
+async function excludedPods(riderId: string, opts: { includeLeft?: boolean } = {}): Promise<Set<string>> {
   const { data } = await createAdminClient()
     .from("pod_members")
     .select("pod_id")
     .eq("user_id", riderId)
-    .in("status", ["declined", "left"]);
+    .in("status", opts.includeLeft ? ["declined", "left"] : ["declined"]);
   return new Set((data ?? []).map((m) => m.pod_id));
 }
 
@@ -246,7 +247,7 @@ export async function fillDriverPod(driverId: string): Promise<number> {
   const fits = (
     await Promise.all(
       promising.map(async (r) => {
-        if ((await excludedPods(r.user_id)).has(podId)) return null;
+        if ((await excludedPods(r.user_id, { includeLeft: true })).has(podId)) return null;
         const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(r.user_id)!);
         return fit ? { r, fit } : null;
       })
@@ -265,13 +266,34 @@ export async function fillDriverPod(driverId: string): Promise<number> {
   return invited;
 }
 
+// Days a rider already has covered by pods they're in (or have asked to join).
+async function coveredDays(riderId: string): Promise<{ days: Set<number>; podIds: Set<string> }> {
+  const { data } = await createAdminClient()
+    .from("pod_members")
+    .select("pod_id, days, pod:pods!inner(status)")
+    .eq("user_id", riderId)
+    .eq("role", "rider")
+    .in("status", ["active", "requested"])
+    .eq("pod.status", "active");
+  const days = new Set<number>();
+  (data ?? []).forEach((m) => (m.days as number[]).forEach((d) => days.add(d)));
+  return { days, podIds: new Set((data ?? []).map((m) => m.pod_id)) };
+}
+
 export type PodOption = { podId: string; driverId: string; fit: Fit };
 
 // The best few pods for a rider, best first. Doesn't invite anyone.
-export async function podOptions(riderId: string, limit = 4): Promise<PodOption[]> {
-  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
-  if (!r) return [];
+export async function podOptions(riderId: string, limit = 6): Promise<PodOption[]> {
+  const [profile] = await loadProfiles({ userIds: [riderId], mode: "rider" });
+  if (!profile) return [];
+  // Riders can be in several pods (e.g. Mon/Wed with one, Tue/Thu with another),
+  // so only look for days that aren't covered yet.
+  const covered = await coveredDays(riderId);
+  const open = profile.days.filter((d) => !covered.days.has(d));
+  if (!open.length) return [];
+  const r: Profile = { ...profile, days: open };
   const excluded = await excludedPods(riderId);
+  covered.podIds.forEach((id) => excluded.add(id));
   const drivers = await loadProfiles({ mode: "driver" });
   const users = await loadUsers([riderId, ...drivers.map((d) => d.user_id)]);
 
@@ -282,7 +304,7 @@ export async function podOptions(riderId: string, limit = 4): Promise<PodOption[
     .map((d) => ({ d, km: closestPointOnPath(home(r), [home(d), campus(d)]).km }))
     .filter((x) => x.km <= MAX_ROUTE_DISTANCE_KM + 2)
     .sort((a, b) => a.km - b.km)
-    .slice(0, 10)
+    .slice(0, 16)
     .map((x) => x.d);
 
   const fits = await Promise.all(
@@ -319,8 +341,13 @@ export async function requestToJoin(riderId: string, podId: string): Promise<{ s
   const { data: pod } = await admin.from("pods").select("id, driver_id, status").eq("id", podId).maybeSingle();
   if (!pod || pod.status !== "active") return { error: "That pod isn't available any more." };
   const [d] = await loadProfiles({ userIds: [pod.driver_id], mode: "driver" });
-  const [r] = await loadProfiles({ userIds: [riderId], mode: "rider" });
-  if (!d || !r) return { error: "Set up your commute first." };
+  const [profile] = await loadProfiles({ userIds: [riderId], mode: "rider" });
+  if (!d || !profile) return { error: "Set up your commute first." };
+  const covered = await coveredDays(riderId);
+  covered.podIds.delete(podId);
+  const open = profile.days.filter((day) => !covered.days.has(day));
+  if (!open.length) return { error: "All your days already have a pod." };
+  const r: Profile = { ...profile, days: open };
   if ((await seatsLeft(podId, d.seats, riderId)) <= 0) return { error: "That pod just filled up." };
   const users = await loadUsers([riderId, d.user_id]);
   const fit = await fullFit(d, r, users.get(d.user_id)!, users.get(riderId)!);
@@ -328,8 +355,10 @@ export async function requestToJoin(riderId: string, podId: string): Promise<{ s
 
   const { data: driver } = await admin.from("users").select("auth_id").eq("id", d.user_id).single();
   const status = driver?.auth_id ? "requested" : "active";
-  // One pod at a time: drop any other pending invites/requests.
-  await admin.from("pod_members").delete().eq("user_id", riderId).eq("role", "rider").in("status", ["invited", "requested"]).neq("pod_id", podId);
+  // Pending invites elsewhere for the same days are now moot.
+  const { data: pending } = await admin.from("pod_members").select("id, days").eq("user_id", riderId).eq("role", "rider").eq("status", "invited").neq("pod_id", podId);
+  const clash = (pending ?? []).filter((m) => (m.days as number[]).some((day) => fit.days.includes(day as Weekday))).map((m) => m.id);
+  if (clash.length) await admin.from("pod_members").delete().in("id", clash);
   await admin.from("pod_members").upsert(
     {
       pod_id: podId,

@@ -7,6 +7,7 @@ import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { ArrowLeft, BadgeCheck, ChevronRight, Search } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
+import PodsButton from "@/components/app/PodsButton";
 import { useMyLocation } from "@/components/app/hooks";
 import { useLiveDrivers } from "@/components/app/useLiveDrivers";
 import LocationSearch from "./LocationSearch";
@@ -113,7 +114,10 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
       {stage !== "pin" && (
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 mx-auto flex max-w-app items-center justify-between p-4">
           <ProfileMenu me={me} mode="rider" onSwitchMode={onSwitchMode} />
-          {DEMO_MODE && <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue shadow-soft">Demo mode</span>}
+          <div className="flex items-center gap-2">
+            {DEMO_MODE && <span className="glass rounded-full px-3 py-1 text-xs font-semibold text-blue">Demo</span>}
+            <PodsButton />
+          </div>
         </div>
       )}
 

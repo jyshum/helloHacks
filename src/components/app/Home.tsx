@@ -5,6 +5,7 @@ import { APIProvider } from "@vis.gl/react-google-maps";
 import { Car, ChevronRight, MapPin } from "lucide-react";
 import RiderHome from "@/components/rider/RiderHome";
 import DriverHome, { type DriverMe } from "@/components/driver/DriverHome";
+import PodsButton from "@/components/app/PodsButton";
 
 type Mode = "rider" | "driver";
 
@@ -48,7 +49,11 @@ export default function Home({ me }: { me: DriverMe }) {
 function ModeChooser({ name, onChoose }: { name: string; onChoose: (m: Mode) => void }) {
   const first = name.split(" ")[0];
   return (
-    <main className="screen flex flex-col justify-center">
+    <main className="screen flex flex-col">
+      <div className="flex">
+        <PodsButton />
+      </div>
+      <div className="flex flex-1 flex-col justify-center">
       <p className="text-sm font-medium text-muted">Hi {first}</p>
       <h1 className="mt-1 text-[34px] font-bold leading-tight text-ubc">Today</h1>
       
@@ -81,6 +86,7 @@ function ModeChooser({ name, onChoose }: { name: string; onChoose: (m: Mode) => 
           </span>
           <ChevronRight size={20} aria-hidden />
         </button>
+      </div>
       </div>
     </main>
   );

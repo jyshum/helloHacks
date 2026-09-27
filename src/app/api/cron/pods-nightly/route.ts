@@ -23,8 +23,9 @@ export async function GET(req: Request) {
   for (const pod of pods ?? []) {
     const { data: dp } = await admin.from("commute_profiles").select("*").eq("user_id", pod.driver_id).eq("active", true).maybeSingle();
     if (!dp || !dp.days.includes(wd)) continue;
-    const { count } = await admin.from("pod_members").select("id", { count: "exact", head: true }).eq("pod_id", pod.id).eq("role", "rider").eq("status", "active");
-    if (!count) continue; // nobody to drive yet
+    const { data: riding } = await admin.from("pod_members").select("days").eq("pod_id", pod.id).eq("role", "rider").eq("status", "active");
+    const count = (riding ?? []).filter((m) => (m.days as number[]).includes(wd)).length;
+    if (!count) continue; // nobody riding that day
 
     const trip = await getOrCreateTrip(admin, pod.id, tomorrow);
     if (trip.status !== "scheduled") continue;
