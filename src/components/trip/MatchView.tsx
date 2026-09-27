@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { BadgeCheck, ChevronDown, ChevronUp, Mail, Navigation, ShieldCheck, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import BaseMap from "@/components/app/BaseMap";
 import BackButton from "@/components/app/BackButton";
@@ -135,7 +136,10 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
       <div className="absolute inset-x-0 top-0 z-10 mx-auto flex max-w-app items-center gap-3 p-4">
         <BackButton />
         {otherPos && !done && !ended && (
-          <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-green shadow-soft">● {first(other.full_name)} is live</span>
+          <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-green shadow-soft">
+            <span className="h-2 w-2 rounded-full bg-green" />
+            {first(other.full_name)} is live
+          </span>
         )}
       </div>
 
@@ -163,10 +167,14 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
             <Link href={`/profile/${other.id}`} className="font-heading text-lg font-semibold text-ink">
               {other.full_name}
             </Link>
-            <p className="text-sm text-muted">
-              ★ {Number(other.rating_avg ?? 5).toFixed(1)}
-              {other.faculty ? ` · ${other.faculty}` : ""}
-              {viewer === "rider" && driver.license_verified ? " · License ✓" : ""}
+            <p className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
+              <span>★ {Number(other.rating_avg ?? 5).toFixed(1)}</span>
+              {other.faculty && <span>· {other.faculty}</span>}
+              {viewer === "rider" && driver.license_verified && (
+                <span className="inline-flex items-center gap-0.5 text-green">
+                  · <BadgeCheck size={14} aria-hidden /> License
+                </span>
+              )}
             </p>
           </div>
           {viewer === "rider" && vehicle && (
@@ -184,10 +192,10 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
         {!ended && !done && request.status !== "pending" && (
           <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
             <a href={`mailto:${other.ubc_email}?subject=UBC Carpool`} className="flex flex-col items-center gap-1 rounded-2xl bg-paper py-3 font-medium">
-              <span className="text-lg">✉️</span>Message
+              <Mail size={20} className="text-ubc" aria-hidden />Message
             </a>
             <button onClick={share} className="flex flex-col items-center gap-1 rounded-2xl bg-paper py-3 font-medium">
-              <span className="text-lg">🛡️</span>Share trip
+              <ShieldCheck size={20} className="text-ubc" aria-hidden />Share trip
             </button>
             {viewer === "driver" ? (
               <a
@@ -196,11 +204,11 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
                 rel="noreferrer"
                 className="flex flex-col items-center gap-1 rounded-2xl bg-paper py-3 font-medium"
               >
-                <span className="text-lg">🧭</span>Navigate
+                <Navigation size={20} className="text-ubc" aria-hidden />Navigate
               </a>
             ) : (
               <Link href={`/profile/${other.id}`} className="flex flex-col items-center gap-1 rounded-2xl bg-paper py-3 font-medium">
-                <span className="text-lg">👤</span>Profile
+                <User size={20} className="text-ubc" aria-hidden />Profile
               </Link>
             )}
           </div>
@@ -212,7 +220,10 @@ function TripScreen({ trip, viewer }: { trip: TripBundle; viewer: Viewer }) {
           <p className="mt-2 flex gap-3"><span className="mt-1.5 h-2 w-2 shrink-0 bg-ink" /><span className="text-ink">{request.dropoff_label}</span></p>
           <button onClick={() => setShowCost((s) => !s)} className="mt-3 flex w-full items-center justify-between border-t border-line pt-3">
             <span className="text-muted">Gas contribution</span>
-            <span className="font-heading font-bold text-ink">{formatCents(request.estimated_cost_cents ?? 0)} {showCost ? "▴" : "▾"}</span>
+            <span className="flex items-center gap-1 font-heading font-bold text-ink">
+              {formatCents(request.estimated_cost_cents ?? 0)}
+              {showCost ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+            </span>
           </button>
         </div>
         {showCost && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, GraduationCap, LocateFixed, MapPin, MapPinned } from "lucide-react";
 import { CAMPUS_SPOTS, PICKUP_SPOTS, type Place } from "@/lib/places";
 
 type Field = "pickup" | "dropoff";
@@ -15,7 +16,7 @@ type Props = {
   onClose: () => void;
 };
 
-type Suggestion = { key: string; main: string; secondary: string; icon: string; place?: Place; placeId?: string };
+type Suggestion = { key: string; main: string; secondary: string; icon: "place" | "campus"; place?: Place; placeId?: string };
 
 // Full-screen "Where to?" panel with pickup + destination inputs.
 export default function LocationSearch({ pickup, dropoff, initialField, myPos, onPick, onPinMode, onClose }: Props) {
@@ -49,7 +50,7 @@ export default function LocationSearch({ pickup, dropoff, initialField, myPos, o
           key: s.placeId,
           main: s.main,
           secondary: s.secondary,
-          icon: "📍",
+          icon: "place" as const,
           placeId: s.placeId,
         }))
       );
@@ -63,7 +64,7 @@ export default function LocationSearch({ pickup, dropoff, initialField, myPos, o
       key: p.label,
       main: p.label,
       secondary: CAMPUS_SPOTS.includes(p) ? "UBC campus" : "Vancouver",
-      icon: CAMPUS_SPOTS.includes(p) ? "🎓" : "🕘",
+      icon: CAMPUS_SPOTS.includes(p) ? ("campus" as const) : ("place" as const),
       place: p,
     }));
 
@@ -103,7 +104,7 @@ export default function LocationSearch({ pickup, dropoff, initialField, myPos, o
     <div className="fixed inset-0 z-40 mx-auto flex max-w-app flex-col bg-white">
       <div className="flex items-center gap-3 px-4 pt-4">
         <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-paper" aria-label="Back">
-          ←
+          <ArrowLeft size={20} aria-hidden />
         </button>
         <h2 className="font-heading text-lg font-bold text-ink">Plan your ride</h2>
       </div>
@@ -137,7 +138,7 @@ export default function LocationSearch({ pickup, dropoff, initialField, myPos, o
       <div className="mt-2 flex-1 overflow-y-auto px-4 pb-6">
         {field === "pickup" && (
           <button onClick={useCurrent} className="row border-b border-line">
-            <span className="row-icon bg-blue text-white">➤</span>
+            <span className="row-icon bg-blue text-white"><LocateFixed size={18} aria-hidden /></span>
             <span>
               <span className="block font-medium text-ink">Current location</span>
               <span className="block text-sm text-muted">{myPos ? "Use GPS" : "Location not allowed yet"}</span>
@@ -145,7 +146,7 @@ export default function LocationSearch({ pickup, dropoff, initialField, myPos, o
           </button>
         )}
         <button onClick={() => onPinMode(field)} className="row border-b border-line">
-          <span className="row-icon">📌</span>
+          <span className="row-icon"><MapPinned size={18} aria-hidden /></span>
           <span>
             <span className="block font-medium text-ink">Set location on map</span>
             <span className="block text-sm text-muted">Drag the map to place a pin</span>
@@ -153,7 +154,7 @@ export default function LocationSearch({ pickup, dropoff, initialField, myPos, o
         </button>
         {suggestions.map((s) => (
           <button key={s.key} onClick={() => choose(s)} className="row border-b border-line">
-            <span className="row-icon">{s.icon}</span>
+            <span className="row-icon">{s.icon === "campus" ? <GraduationCap size={18} aria-hidden /> : <MapPin size={18} aria-hidden />}</span>
             <span className="min-w-0">
               <span className="block truncate font-medium text-ink">{s.main}</span>
               <span className="block truncate text-sm text-muted">{s.secondary}</span>

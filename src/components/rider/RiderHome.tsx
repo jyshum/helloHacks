@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { ArrowLeft, BadgeCheck, ChevronRight, GraduationCap } from "lucide-react";
 import BaseMap from "@/components/app/BaseMap";
 import ProfileMenu, { type MenuUser } from "@/components/app/ProfileMenu";
 import { useMyLocation } from "@/components/app/hooks";
@@ -124,7 +125,7 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
                 <span className="block text-xs text-white/70">{activeTrip.status === "pending" ? "Request sent" : "Trip confirmed"}</span>
                 <span className="font-heading font-semibold">Your ride with {activeTrip.otherName}</span>
               </span>
-              <span>→</span>
+              <ChevronRight size={20} aria-hidden />
             </Link>
           )}
           <h2 className="font-heading text-2xl font-bold text-ink">Hi {me.full_name.split(" ")[0]}</h2>
@@ -146,7 +147,7 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
           <div className="mt-2 divide-y divide-line">
             {CAMPUS_SPOTS.slice(0, 3).map((p) => (
               <button key={p.label} onClick={() => quickDestination(p)} className="row">
-                <span className="row-icon">🎓</span>
+                <span className="row-icon"><GraduationCap size={18} aria-hidden /></span>
                 <span>
                   <span className="block font-medium text-ink">{p.label}</span>
                   <span className="block text-sm text-muted">UBC campus</span>
@@ -178,7 +179,9 @@ export default function RiderHome({ me, onSwitchMode }: { me: MenuUser; onSwitch
             <svg width="36" height="48" viewBox="0 0 30 40"><path d="M15 38s12-11 12-22A12 12 0 1 0 3 16c0 11 12 22 12 22z" fill="#002145" stroke="#fff" strokeWidth="2.5" /><circle cx="15" cy="16" r="4.5" fill="#fff" /></svg>
           </div>
           <div className="absolute inset-x-0 top-0 z-10 mx-auto max-w-app p-4">
-            <button onClick={() => setStage("search")} className="rounded-full bg-white px-4 py-2 font-semibold shadow-lift">← Back</button>
+            <button onClick={() => setStage("search")} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 font-semibold shadow-lift">
+              <ArrowLeft size={18} aria-hidden /> Back
+            </button>
           </div>
           <div className="sheet">
             <div className="sheet-handle" />
@@ -300,7 +303,7 @@ function ChooseRide({
     <>
       <div className="absolute inset-x-0 top-0 z-10 mx-auto max-w-app p-4">
         <button onClick={onBack} className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left shadow-lift">
-          <span className="text-lg">←</span>
+          <ArrowLeft size={20} className="shrink-0" aria-hidden />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm text-muted">{pickup.label}</span>
             <span className="block truncate font-semibold text-ink">{dropoff.label}</span>
@@ -338,7 +341,7 @@ function ChooseRide({
                   <div className="flex items-center gap-1.5">
                     <p className="truncate font-heading font-semibold text-ink">{o.driverName}</p>
                     <span className="shrink-0 text-xs text-muted">★ {o.driverRating.toFixed(1)}</span>
-                    {o.licenseVerified && <span className="shrink-0 text-xs text-green" title="License verified">✓</span>}
+                    {o.licenseVerified && <BadgeCheck size={14} className="shrink-0 text-green" aria-label="License verified" />}
                   </div>
                   <p className="truncate text-sm text-muted">
                     {o.vehicle ? `${o.vehicle.color} ${o.vehicle.make_model}` : o.driverFaculty ?? "UBC student"}

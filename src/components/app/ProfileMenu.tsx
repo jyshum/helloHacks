@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { ArrowLeftRight, BadgeCheck, Clock, House, IdCard, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Avatar from "@/components/Avatar";
@@ -56,15 +57,19 @@ export default function ProfileMenu({
               <p className="mt-3 font-heading text-2xl font-bold">{me.full_name}</p>
               <div className="mt-1 flex items-center gap-2 text-sm text-white/80">
                 <span>★ {Number(me.rating_avg ?? 5).toFixed(1)}</span>
-                {me.license_verified && <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs">License verified ✓</span>}
+                {me.license_verified && (
+                  <span className="flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                    <BadgeCheck size={12} aria-hidden /> License verified
+                  </span>
+                )}
               </div>
               <p className="mt-3 text-sm font-semibold text-sky">View profile →</p>
             </Link>
 
             <nav className="flex flex-col py-2">
-              <MenuItem href="/map" label="Home" icon="⌂" onClick={() => setOpen(false)} />
-              <MenuItem href="/trips" label="Your trips" icon="⏱" onClick={() => setOpen(false)} />
-              <MenuItem href="/driver-verify" label="License & car" icon="🪪" onClick={() => setOpen(false)} />
+              <MenuItem href="/map" label="Home" icon={House} onClick={() => setOpen(false)} />
+              <MenuItem href="/trips" label="Your trips" icon={Clock} onClick={() => setOpen(false)} />
+              <MenuItem href="/driver-verify" label="License & car" icon={IdCard} onClick={() => setOpen(false)} />
               {onSwitchMode && (
                 <button
                   onClick={() => {
@@ -73,7 +78,7 @@ export default function ProfileMenu({
                   }}
                   className="flex items-center gap-4 px-5 py-4 text-left font-medium text-ink hover:bg-paper"
                 >
-                  <span className="w-6 text-center text-lg">⇄</span>
+                  <ArrowLeftRight size={20} className="w-6 text-muted" aria-hidden />
                   Switch to {mode === "rider" ? "driving" : "riding"}
                 </button>
               )}
@@ -91,10 +96,10 @@ export default function ProfileMenu({
   );
 }
 
-function MenuItem({ href, label, icon, onClick }: { href: string; label: string; icon: string; onClick: () => void }) {
+function MenuItem({ href, label, icon: Icon, onClick }: { href: string; label: string; icon: LucideIcon; onClick: () => void }) {
   return (
     <Link href={href} onClick={onClick} className="flex items-center gap-4 px-5 py-4 font-medium text-ink hover:bg-paper">
-      <span className="w-6 text-center text-lg">{icon}</span>
+      <Icon size={20} className="w-6 text-muted" aria-hidden />
       {label}
     </Link>
   );

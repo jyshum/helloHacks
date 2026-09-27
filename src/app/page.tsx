@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, Car, Fuel, MapPin, ShieldCheck, UserRound } from "lucide-react";
 
 export default function RoleSelect() {
   return (
@@ -31,14 +32,14 @@ export default function RoleSelect() {
 
       <div className="mt-8 flex flex-col gap-3">
         <Link href="/signup" className="group btn-ubc gap-2 py-4 text-lg shadow-lift">
-          Get started <Arrow />
+          Get started <ArrowRight size={20} className="transition group-hover:translate-x-1" aria-hidden />
         </Link>
         <p className="flex items-center justify-center gap-4 text-sm text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="text-sky"><PinIcon size={16} /></span> Ride
+            <span className="text-sky"><MapPin size={16} aria-hidden /></span> Ride
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="text-ubc"><CarIcon size={16} /></span> Drive
+            <span className="text-ubc"><Car size={16} aria-hidden /></span> Drive
           </span>
           <span>One account for both</span>
         </p>
@@ -84,9 +85,9 @@ const STEPS = [
 ];
 
 const TRUST = [
-  { label: "UBC email verified", icon: <ShieldIcon /> },
-  { label: "Cost-sharing, not fares", icon: <DropIcon /> },
-  { label: "See profiles before you ride", icon: <UserIcon /> },
+  { label: "UBC email verified", icon: <ShieldCheck size={22} aria-hidden /> },
+  { label: "Cost-sharing, not fares", icon: <Fuel size={22} aria-hidden /> },
+  { label: "See profiles before you ride", icon: <UserRound size={22} aria-hidden /> },
 ];
 
 // A stylised map card: Kitsilano -> UBC with one pickup, showing what a match looks like.
@@ -151,54 +152,5 @@ function LogoMark() {
         <circle cx="12" cy="10" r="2" fill="currentColor" />
       </svg>
     </span>
-  );
-}
-
-function Arrow() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition group-hover:translate-x-1">
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-function CarIcon({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 17h14M6 17v2M18 17v2M3 13l2-6a2 2 0 0 1 2-1.4h10A2 2 0 0 1 19 7l2 6v4H3z" />
-      <circle cx="7.5" cy="13.5" r="1" /><circle cx="16.5" cy="13.5" r="1" />
-    </svg>
-  );
-}
-
-function PinIcon({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" /><circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /><path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
-function DropIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-    </svg>
   );
 }

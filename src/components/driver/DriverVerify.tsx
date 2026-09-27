@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { BadgeCheck, Check } from "lucide-react";
 import type { Vehicle } from "@/lib/types";
 
 const PROVINCES = ["BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT", "NT", "NU"];
@@ -103,7 +104,9 @@ function DriverVerifyInner({ licenseVerified, vehicle }: Props) {
           <h2 className="text-lg font-bold text-ink">Driver&apos;s license</h2>
         </div>
         {verified ? (
-          <p className="mt-3 rounded-2xl bg-green/10 px-4 py-3 text-sm font-semibold text-green">License verified ✓</p>
+          <p className="mt-3 flex items-center gap-2 rounded-2xl bg-green/10 px-4 py-3 text-sm font-semibold text-green">
+            <BadgeCheck size={18} aria-hidden /> License verified
+          </p>
         ) : (
           <>
             <p className="mt-3 text-sm text-muted">
@@ -182,7 +185,7 @@ function StepDot({ n, done }: { n: number; done: boolean }) {
         done ? "bg-green text-white" : "bg-frost text-ubc"
       }`}
     >
-      {done ? "✓" : n}
+      {done ? <Check size={16} strokeWidth={3} aria-hidden /> : n}
     </span>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -45,7 +46,9 @@ function Login() {
 
   return (
     <main className="screen">
-      <Link href="/" className="text-sm text-muted">← Back</Link>
+      <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted">
+        <ArrowLeft size={16} aria-hidden /> Back
+      </Link>
       <h1 className="mt-6 text-3xl font-bold text-ubc">Welcome back</h1>
       {justVerified && (
         <p className="mt-3 rounded-2xl bg-green/10 px-4 py-3 text-sm text-green">
